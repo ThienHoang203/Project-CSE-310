@@ -1,0 +1,148 @@
+CREATE TABLE users(
+    id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    PASSWORD VARCHAR(255) NOT NULL,
+    NAME VARCHAR(50) NULL,
+    email VARCHAR(200) NULL UNIQUE,
+    phone_number VARCHAR(11) NOT NULL UNIQUE,
+    role ENUM("admin", "user") NOT NULL DEFAULT "user",
+    STATUS ENUM
+        ("active", "disable") NOT NULL DEFAULT "active",
+        membership_level ENUM("bronze", "silver", "gold") NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE books(
+    id INT not null PRIMARY KEY AUTO_INCREMENT,
+    author VARCHAR(50) NULL,
+    title VARCHAR(200) NOT NULL,
+    gerne VARCHAR(30) NULL,
+    description TEXT NULL,
+    cover_image VARCHAR(300) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE book_versions(
+    id INT PRIMARY KEY AUTO_INCREMENT NOT NULL,
+    book_id INT NOT NULL,
+    version_number INT DEFAULT 1,
+    quantity INT DEFAULT 0,
+    published_date DATE NULL,
+    file_url VARCHAR(300) NULL,
+    FORMAT ENUM("physical", "digital") NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY(book_id) REFERENCES books(id)
+);
+
+CREATE TABLE book_copies(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    book_version_id INT NOT NULL,
+    STATUS ENUM
+        (
+            "available",
+            "borrowed",
+            "sold",
+            "missing"
+        ) NOT NULL DEFAULT "available",
+        location VARCHAR(200) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY(book_version_id) REFERENCES book_versions(id)
+);
+
+CREATE TABLE orders(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    status ENUM
+        ("pending", "completed", "cancel") NOT NULL DEFAULT "pending",
+        total_price DECIMAL(10, 3) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE order_details(
+    id int PRIMARY KEY not null AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    book_copy_id INT NOT NULL,
+    purchase_price DECIMAL(10, 0) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (book_copy_id) REFERENCES book_copies(id)
+);
+
+
+CREATE TABLE wishlist(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_id INT NOT NULL,
+    book_version_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(book_id) REFERENCES books(id),
+    FOREIGN KEY(book_version_id) REFERENCES book_versions(id)
+);
+
+CREATE TABLE borrowing_transactions(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_copy_id INT NOT NULL,
+    borrowed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_date DATE NOT NULL,
+    returned_at TIMESTAMP NULL,
+    STATUS ENUM
+        (
+            "borrowed",
+            "returned",
+            "overdue",
+            "missing"
+        ) NOT NULL DEFAULT "borrowed",
+        FOREIGN KEY(book_copy_id) REFERENCES book_copies(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+
+CREATE TABLE rating(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_id INT NOT NULL,
+    book_version_id INT NULL,
+    comment TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    rating INT NOT NULL CHECK
+        (rating BETWEEN 1 AND 5),
+        FOREIGN KEY(book_version_id) REFERENCES book_versions(id),
+        FOREIGN KEY(book_id) REFERENCES books(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE reservation(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    book_id INT NOT NULL,
+    book_version_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    STATUS ENUM
+        ("waiting", "successful", "cancel") NOT NULL DEFAULT "waiting",
+        FOREIGN KEY(book_version_id) REFERENCES book_versions(id),
+        FOREIGN KEY(book_id) REFERENCES books(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE fine(
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    borrowing_transaction_id INT NOT NULL,
+    amount DECIMAL(10, 3) NOT NULL,
+    STATUS ENUM
+        ("unpaid", "paid") NOT NULL DEFAULT "unpaid",
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        paid_at TIMESTAMP NULL,
+        FOREIGN KEY(borrowing_transaction_id) REFERENCES borrowing_transactions(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+);
