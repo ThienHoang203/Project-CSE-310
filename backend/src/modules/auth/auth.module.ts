@@ -23,7 +23,7 @@ import { RefeshToken } from 'src/entities/refesh-token.entity';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('SECRET_KEY') || '',
-        signOptions: { expiresIn: configService.get<string>('EXPIRE_TIME') || '30s' },
+        signOptions: { expiresIn: configService.get<string>('EXPIRE_TIME') || '30m' },
       }),
     }),
   ],

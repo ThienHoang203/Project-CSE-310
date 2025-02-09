@@ -6,10 +6,22 @@ import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { RefeshToken } from 'src/entities/refesh-token.entity';
 import * as bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 
-export type LoginPayloadType = {
-  username: string;
-  id: number;
+export type TokenPayloadType = {
+  userId: number;
+  role: string;
+  membershipLevel: string | null;
+};
+
+export type RefreshTokenPayloadType = {
+  userId: number;
+  id: string;
+};
+
+export type TokensType = {
+  access_token: string;
+  refresh_token: string;
 };
 
 export type RefreshTokenVerifiedType = { token: string; id: number };
@@ -23,55 +35,64 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(dataLogin: User): Promise<any> {
-    const payload: LoginPayloadType = { username: dataLogin.username, id: dataLogin.id };
+  async login({ id, role, membershipLevel }: User): Promise<any> {
+    const payload: TokenPayloadType = { userId: id, role: role, membershipLevel: membershipLevel };
 
-    const refeshToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload);
 
+    const refreshToken = await this.storeRefreshToken(id);
     return {
-      access_token: this.jwtService.sign(payload),
-      refesh_token: refeshToken,
+      access_token: {
+        token: accessToken,
+        expires_at: new Date(new Date().getTime() + 5 * 60 * 1000).toLocaleString('vi-VN', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }),
+      },
+      refresh_token: refreshToken,
     };
   }
 
-  async storeRefeshToken(payload: LoginPayloadType): Promise<RefreshTokenVerifiedType> {
-    const token: RefeshToken = this.refreshTokenRepository.create();
+  async storeRefreshToken(userId: number): Promise<{ refreshToken: string; exprires_at: string }> {
+    const refreshToken = this.refreshTokenRepository.create();
 
-    const nowDate = new Date();
-    token.expriresAt = new Date(nowDate.getTime() + 2 * 60 * 60 * 1000);
+    refreshToken.userId = userId;
 
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '2h',
+    refreshToken.hashedTokenId = uuidv4();
+
+    const currentTime = new Date();
+    refreshToken.expriresAt = new Date(currentTime.getTime() + 24 * 60 * 60 * 1000);
+
+    const payload: RefreshTokenPayloadType = { id: refreshToken.hashedTokenId, userId: userId };
+
+    const token = this.jwtService.sign(payload, {
+      expiresIn: '24h',
     });
-    token.token = await bcrypt.hash(refreshToken, 10);
+    console.log('token::::', this.jwtService.decode(token));
 
-    console.log('token hashed::::', token.token);
+    const hashedToken = await bcrypt.hash(token, 10);
+    refreshToken.hashedToken = hashedToken;
 
-    token.deviceInfo = await JSON.parse(JSON.stringify({ thien: 'ssdf' }));
-
-    token.userId = payload.id;
-
-    const result: RefeshToken = await this.refreshTokenRepository.save(token);
-
-    return { token: refreshToken, id: result.id };
+    await this.refreshTokenRepository.save(refreshToken);
+    return {
+      refreshToken: token,
+      exprires_at: refreshToken.expriresAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+    };
   }
 
-  async verifyRefreshToken(refreshToken: string) {
-    const decoded = this.jwtService.decode(refreshToken);
+  async verifyRefeshToken(refeshToken: string): Promise<any> {
+    const decoded: {} & RefreshTokenPayloadType = await this.jwtService.verify(refeshToken);
     console.log('decoded:::::', decoded);
 
-    if (!decoded) throw new UnauthorizedException('invalid refresh token');
-    this.checkRefreshToken(refreshToken, decoded.refesh_token.id, decoded.id);
-
-    return decoded;
-  }
-
-  async checkRefreshToken(refreshToken: string, refreshTokenId: number, userId: number) {
-    refreshToken = await bcrypt.hash(refreshToken, 10);
-    const token = await this.refreshTokenRepository.findOneBy({ userId: userId, id: refreshTokenId });
-    if (!token) throw new UnauthorizedException('this user do not have this refresh token');
-    const isMatch = await bcrypt.compare(refreshToken, token.token);
-    if (!isMatch) throw new UnauthorizedException('invalid refresh token');
-    throw new HttpException('ok', HttpStatus.OK);
+    if (decoded) {
+      const token = await this.refreshTokenRepository.findOneBy({
+        hashedTokenId: decoded.id,
+        userId: decoded.userId,
+      });
+      if (token) {
+        const isMatch = await bcrypt.compare(refeshToken, token.hashedToken);
+        if (isMatch) return decoded;
+      }
+    }
+    throw new UnauthorizedException('invalid refresh token');
   }
 }

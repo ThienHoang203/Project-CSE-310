@@ -5,7 +5,10 @@ import { User } from './user.entity';
 @Entity()
 export class RefeshToken extends AbstractEntity {
   @Column({ type: 'text', nullable: false })
-  token: string;
+  hashedToken: string;
+
+  @Column({ type: 'uuid', nullable: false })
+  hashedTokenId: string;
 
   @CreateDateColumn({ type: 'timestamp', nullable: false })
   expriresAt: Date;

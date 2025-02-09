@@ -4,7 +4,7 @@ import { User } from '../../entities/user.entity';
 import { DeleteResult, Equal, Not, Or, Repository, UpdateResult } from 'typeorm';
 import UpdateUserDto from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class UserService {
   constructor(
@@ -31,8 +31,6 @@ export class UserService {
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    console.log('username2::::', username);
-
     const user: User | null = await this.userRepository.findOneBy({ username: username });
     return user;
   }

@@ -2,7 +2,6 @@ import { BadRequestException, Body, Controller, Get, Post, Request, UseGuards } 
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import CreateUserDto from '../user/dto/create-user.dto';
-import LoginDto from './dto/login.dto';
 import { LocalAuthGuard } from 'src/guard/local-auth.guard';
 import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
 
@@ -21,8 +20,6 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('/login')
   login(@Request() req: any) {
-    console.log('req:::::', req);
-
     return this.authService.login(req.user);
   }
 
@@ -35,8 +32,7 @@ export class AuthController {
   @Post('/refresh-token')
   refreshToken(@Body() { refreshToken }: { refreshToken: string }) {
     console.log('1:::::', refreshToken);
-
     if (!refreshToken) throw new BadRequestException('refresh token is required!');
-    return this.authService.verifyRefreshToken(refreshToken);
+    return this.authService.verifyRefeshToken(refreshToken);
   }
 }

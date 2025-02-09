@@ -7,7 +7,7 @@ import LoginDto from 'src/modules/auth/dto/login.dto';
 import { UserService } from 'src/modules/user/user.service';
 
 @Injectable()
-export class LocalStrategy extends PassportStrategy(Strategy) {
+export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
   constructor(private readonly userService: UserService) {
     super({
       //these attribute is option, these are used to help know which field is used for login, default these are username and password
@@ -17,6 +17,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(username: string, password: string) {
+    //validate input from user
     const loginDto = plainToInstance(LoginDto, { username, password });
     const errors = await validate(loginDto);
     if (errors.length > 0) {
@@ -28,6 +29,8 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
         }),
       );
     }
+
+    //validate user in database
     const user = await this.userService.validateUser(username, password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
