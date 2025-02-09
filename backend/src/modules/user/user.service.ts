@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
 import { DeleteResult, Equal, Not, Or, Repository, UpdateResult } from 'typeorm';
 import UpdateUserDto from './dto/update-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -16,6 +17,23 @@ export class UserService {
     if (!user) {
       throw new HttpException('not found', HttpStatus.NOT_FOUND);
     }
+    return user;
+  }
+
+  async validateUser(username: string, password: string): Promise<User | null> {
+    const user = await this.findByUsername(username);
+    if (!user) return null;
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
+
+    return user;
+  }
+
+  async findByUsername(username: string): Promise<User | null> {
+    console.log('username2::::', username);
+
+    const user: User | null = await this.userRepository.findOneBy({ username: username });
     return user;
   }
 
@@ -41,6 +59,8 @@ export class UserService {
     }
 
     //If those fields have not in any record, it will create a new user
+    const hashPassword = await bcrypt.hash(userData.password, 10);
+    userData.password = hashPassword;
     user = this.userRepository.create(userData);
     return this.userRepository.save(user);
   }

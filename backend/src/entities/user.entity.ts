@@ -1,5 +1,6 @@
 import { AbstractEntity } from 'src/utils/entity';
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
+import { RefeshToken } from './refesh-token.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -43,4 +44,7 @@ export class User extends AbstractEntity {
 
   @Column({ type: 'enum', enum: UserMembershipLevel, nullable: true })
   membershipLevel: UserMembershipLevel;
+
+  @OneToMany(() => RefeshToken, (token) => token.id)
+  refeshTokens: RefeshToken[];
 }

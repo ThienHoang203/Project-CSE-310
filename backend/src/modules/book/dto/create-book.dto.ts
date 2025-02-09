@@ -8,8 +8,8 @@ export default class CreateBookDto extends Book {
   author: string;
 
   @MaxLength(200, { message: 'tiêu đề sách không được vượt quá 200 kí tự' })
-  @IsNotEmpty({ message: 'tiêu đề sách không được để trống' })
   @IsString({ message: 'tiêu đề sách phải là chuỗi' })
+  @IsNotEmpty({ message: 'tiêu đề sách không được để trống' })
   title: string;
 
   @IsEnum(BookGerne)

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import CreateUserDto from './dto/create-user.dto';
 import UpdateUserDto from './dto/update-user.dto';
@@ -15,7 +26,9 @@ export class UserController {
 
   // query param
   @Get()
-  getAllUser() {
+  getAllUser(@Req() req: Request & { user: string }) {
+    console.log('request::::', req.user);
+
     return this.userService.findAll();
   }
 
