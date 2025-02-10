@@ -11,6 +11,7 @@ import { BookVersion } from './entities/book-version.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { RefeshToken } from './entities/refesh-token.entity';
+import { WishListModule } from './modules/wish-list/wish-list.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { RefeshToken } from './entities/refesh-token.entity';
     BookModule,
     BookVersionModule,
     AuthModule,
+    WishListModule,
   ],
   controllers: [AppController],
   providers: [AppService],
