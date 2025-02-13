@@ -14,6 +14,7 @@ import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
 import { Fine } from './entities/fine.entity';
 import { Reservation } from './entities/reservation.entity';
 import { Wishlist } from './entities/wishlist.entity';
+import { WishlistModule } from './modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { Wishlist } from './entities/wishlist.entity';
     UserModule,
     BookModule,
     AuthModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],
