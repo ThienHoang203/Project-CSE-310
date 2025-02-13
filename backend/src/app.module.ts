@@ -9,15 +9,11 @@ import { Book } from './entities/book.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RefeshToken } from './entities/refesh-token.entity';
-<<<<<<< Updated upstream
-=======
-import { WishListModule } from './modules/wish-list/wish-list.module';
 import { Rating } from './entities/rating.entity';
 import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
 import { Fine } from './entities/fine.entity';
 import { Reservation } from './entities/reservation.entity';
 import { Wishlist } from './entities/wishlist.entity';
->>>>>>> Stashed changes
 
 @Module({
   imports: [
