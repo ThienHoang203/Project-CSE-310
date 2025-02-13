@@ -14,7 +14,7 @@ export class BookController {
 
   @Get('/:id')
   getBookById(@Param('id') id: string) {
-    return this.bookService.findById(+id);
+    return this.bookService.findById(BigInt(id));
   }
 
   @Post()
@@ -37,11 +37,11 @@ export class BookController {
     if (!bookData) {
       throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
     }
-    return this.bookService.update(+id, bookData);
+    return this.bookService.update(BigInt(id), bookData);
   }
 
   @Delete('/:id')
   delete(@Param('id') id: string) {
-    return this.bookService.delete(+id);
+    return this.bookService.delete(BigInt(id));
   }
 }

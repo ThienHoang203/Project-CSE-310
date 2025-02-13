@@ -6,49 +6,40 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { BookModule } from './modules/book/book.module';
 import { Book } from './entities/book.entity';
-import { BookVersionModule } from './modules/book-version/book-version.module';
-import { BookVersion } from './entities/book-version.entity';
 import { AuthModule } from './modules/auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RefeshToken } from './entities/refesh-token.entity';
+<<<<<<< Updated upstream
+=======
+import { WishListModule } from './modules/wish-list/wish-list.module';
+import { Rating } from './entities/rating.entity';
+import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
+import { Fine } from './entities/fine.entity';
+import { Reservation } from './entities/reservation.entity';
+import { Wishlist } from './entities/wishlist.entity';
+>>>>>>> Stashed changes
 
 @Module({
   imports: [
-    //***********Error code block*/
-    // TypeOrmModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: async (configService: ConfigService) => ({
-    //     type: 'mariadb',
-    //     host: configService.get<string>('DB_HOST'),
-    //     port: configService.get<number>('DB_PORT'),
-    //     username: configService.get<string>('DB_USERNAME'),
-    //     password: configService.get<string>('DB_PASSWORD'),
-    //     database: configService.get<string>('DB_NAME'),
-    //     entities: [User, Book, BookVersion],
-    //     synchronize: true,
-    //     logging: true,
-    //   }),
-    // }),
-
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: '',
-      database: 'book_management2',
-      entities: [User, Book, BookVersion, RefeshToken],
-      synchronize: true,
-      logging: true,
-      migrations: [],
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [User, Book, RefeshToken, Rating, BorrowingTransaction, Fine, Reservation, Wishlist],
+        synchronize: true,
+        logging: true,
+      }),
     }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     UserModule,
     BookModule,
-    BookVersionModule,
     AuthModule,
   ],
   controllers: [AppController],

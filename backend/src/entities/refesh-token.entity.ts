@@ -1,4 +1,4 @@
-import { AbstractEntity } from 'src/utils/entity';
+import { AbstractEntity } from 'src/entities/entity';
 import { Entity, Column, OneToOne, JoinColumn, CreateDateColumn, ManyToOne } from 'typeorm';
 import { User } from './user.entity';
 
@@ -16,11 +16,11 @@ export class RefeshToken extends AbstractEntity {
   @Column({ type: 'bool', nullable: false, default: false })
   revoked: boolean;
 
+  @Column({ type: 'bigint', nullable: false })
+  userId: bigint;
+
   @Column({ type: 'json', nullable: true })
   deviceInfo: JSON;
-
-  @Column({ type: 'int', nullable: false })
-  userId: number;
 
   @ManyToOne(() => User, (user) => user.id)
   @JoinColumn()
