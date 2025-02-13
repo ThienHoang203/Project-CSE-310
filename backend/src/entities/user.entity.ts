@@ -1,4 +1,4 @@
-import { AbstractEntity } from 'src/utils/entity';
+import { AbstractEntity } from 'src/entities/entity';
 import { Entity, Column, OneToMany } from 'typeorm';
 import { RefeshToken } from './refesh-token.entity';
 

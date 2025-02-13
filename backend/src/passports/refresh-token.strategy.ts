@@ -1,27 +1,29 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AuthService } from 'src/modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
-  constructor(
-    private authService: AuthService,
-    private configService: ConfigService,
-  ) {
+export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwtRefresh') {
+  constructor(private readonly configService: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('SECRET_KEY') || 'thien',
+      secretOrKey: configService.get<string>('JWT_SECRET_KEY') || 'thien',
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: any) {
-    // const isValid = await this.authService.validateRefreshToken(payload.sub);
-    // if (!isValid) {
-    //   throw new UnauthorizedException('refresh token không hợp lệ');
-    // }
-    // return { userId: payload.sub };
+  async validate(req: Request, payload: any) {
+    const refreshToken = (req.headers as any)['authorization'].split(' ')[1];
+    console.log(refreshToken);
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Missing refresh token');
+    }
+    return {
+      ...payload,
+      refreshToken,
+    };
   }
 }

@@ -8,22 +8,22 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from 'src/passports/local.strategy';
 import { JwtStrategy } from 'src/passports/jwt.strategy';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { RefeshToken } from 'src/entities/refesh-token.entity';
+import { RefreshTokenStrategy } from 'src/passports/refresh-token.strategy';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, RefreshTokenStrategy],
   imports: [
     UserModule,
     PassportModule,
     TypeOrmModule.forFeature([User, RefeshToken]),
     JwtModule.registerAsync({
-      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('SECRET_KEY') || '',
-        signOptions: { expiresIn: configService.get<string>('EXPIRE_TIME') || '30m' },
+        secret: configService.get<string>('JWT_SECRET_KEY'),
+        signOptions: { expiresIn: configService.get<string>('JWT_ACCESS_TOKEN_EXPIRE_TIME') },
       }),
     }),
   ],

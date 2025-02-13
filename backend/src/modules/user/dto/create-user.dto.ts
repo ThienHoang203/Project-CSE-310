@@ -13,7 +13,7 @@ import { User, UserMembershipLevel, UserRole, UserStatus } from 'src/entities/us
 export default class CreateUserDto extends User {
   @MaxLength(50, { message: 'tên đăng nhập không được vượt quá 50 kí tự' })
   @IsString({ message: 'tên đăng nhập phải là chuỗi' })
-  @IsNotEmpty({ message: 'tên đăng nhập không được để trống' })
+  @IsNotEmpty({ message: 'tên đăng nhập không được để trống', always: true })
   username: string;
 
   @MinLength(8, { message: 'mật khẩu đăng nhập không được ít hơn 8 kí tự' })

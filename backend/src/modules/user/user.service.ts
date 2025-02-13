@@ -1,19 +1,29 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
-import { DeleteResult, Equal, Not, Or, Repository, UpdateResult } from 'typeorm';
+import { DeleteResult, Equal, Not, Repository, UpdateResult } from 'typeorm';
 import UpdateUserDto from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+import CreateUserDto from './dto/create-user.dto';
+
 @Injectable()
 export class UserService {
+  private logger = new Logger(UserService.name);
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async findById(id: number): Promise<User | null> {
+  async findById(id: bigint): Promise<User | null> {
     const user: User | null = await this.userRepository.findOneBy({ id });
+    this.logger.error('find user by ID::', user);
     if (!user) {
       throw new HttpException('not found', HttpStatus.NOT_FOUND);
     }
@@ -39,12 +49,12 @@ export class UserService {
     return this.userRepository.find();
   }
 
-  async create(userData: User): Promise<User> {
+  async create(userData: CreateUserDto): Promise<any> {
     //Check if the email or phone number or username has already existed
     let user: User | null = await this.userRepository.findOneBy([
       { email: userData.email ?? '' },
-      { phoneNumber: userData.phoneNumber },
-      { username: userData.username },
+      { phoneNumber: userData.phoneNumber ?? '' },
+      { username: userData.username ?? '' },
     ]);
     if (user) {
       if (userData.username === user.username) {
@@ -57,45 +67,60 @@ export class UserService {
     }
 
     //If those fields have not in any record, it will create a new user
-    const hashPassword = await bcrypt.hash(userData.password, 10);
+    const hashPassword = await this.hashPassword(userData.password);
     userData.password = hashPassword;
     user = this.userRepository.create(userData);
-    return this.userRepository.save(user);
+    const result = await this.userRepository.insert(user);
+    if (result.raw.affectedRows === 1)
+      return {
+        message: 'user was created',
+        userId: result.identifiers[0].id,
+        status: HttpStatus.CREATED,
+      };
+    return false;
   }
 
-  async update(id: number, userData: UpdateUserDto): Promise<User | null> {
-    //Check if the email or phone number has already existed
-    let user: User | null = await this.userRepository.findOneBy([
-      { email: userData.email ?? '', id: Not(Equal(id)) },
-      { phoneNumber: userData.phoneNumber ?? '', id: Not(Equal(id)) },
-    ]);
-    if (user) {
-      if (userData.email === user.email) {
-        throw new HttpException('email existed', HttpStatus.BAD_REQUEST);
-      } else if (userData.phoneNumber === user.phoneNumber) {
-        throw new HttpException('phone number existed', HttpStatus.BAD_REQUEST);
-      }
-    }
+  hashPassword(pass: string): Promise<string> {
+    return bcrypt.hash(pass, 10);
+  }
 
-    //Check if the user with this id hasn't already existed
-    user = await this.userRepository.findOneBy({ id });
-    if (!user) {
-      throw new HttpException('not found', HttpStatus.NOT_FOUND);
-    }
+  async update(id: bigint, userData: UpdateUserDto): Promise<any> {
+    const user: User | null = await this.userRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException(`không tìm thấy user(id = ${id})`);
 
-    // if the user with this id has already existed
-    const result: UpdateResult = await this.userRepository.update(id, userData);
-    if (result.affected !== 1) {
+    let isExisting: boolean = false;
+
+    if ('email' in userData)
+      isExisting = await this.userRepository.exists({
+        where: { email: Equal(userData.email), id: Not(Equal(id)) },
+      });
+    if (isExisting) throw new BadRequestException('email đã tồn tại');
+
+    if ('phoneNumber' in userData)
+      isExisting = await this.userRepository.exists({
+        where: { phoneNumber: Equal(userData.phoneNumber), id: Not(Equal(id)) },
+      });
+    if (isExisting) throw new BadRequestException('số điện thoại đã tồn tại');
+
+    Object.entries(userData).forEach(([key, value]) => {
+      if (value) user[`${key}`] = value;
+    });
+
+    if ('password' in userData) user.password = await this.hashPassword(userData.password);
+
+    const result = await this.userRepository.save(user);
+
+    if (!result) {
       throw new HttpException('unsuccessfully updated', HttpStatus.BAD_REQUEST);
     }
-    return this.userRepository.findOneBy({ id });
+    return result;
   }
 
-  async delete(id: number) {
-    const result: DeleteResult = await this.userRepository.delete(id);
-    if (result.affected !== 1) {
-      throw new HttpException('unsuccessful', HttpStatus.NOT_FOUND);
-    }
-    return { message: 'successfully deleted' };
+  async delete(id: bigint) {
+    const user: User | null = await this.userRepository.findOneBy({ id });
+    if (!user) throw new HttpException('user not found', HttpStatus.NOT_FOUND);
+
+    const result: User = await this.userRepository.remove(user);
+    return { message: 'successfully deleted', status: HttpStatus.OK };
   }
 }
