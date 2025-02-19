@@ -5,19 +5,49 @@ import CreateUserDto from '../user/dto/create-user.dto';
 import { LocalAuthGuard } from 'src/guard/local-auth.guard';
 import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
 import { RefreshTokenAuthGuard } from 'src/guard/refresh-token-auth.guard';
+import { Public } from 'src/decorator/public-route.decorator';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UserService,
+    private readonly mailerService: MailerService,
+    // private readonly configService: ConfigService,
   ) {}
 
+  @Public()
   @Post('/register')
   register(@Body() userData: CreateUserDto) {
     return this.userService.create(userData);
   }
 
+  @Public()
+  @Get('/mail')
+  async getMail() {
+    // console.log(this.configService.get('MAIL_USER'));
+
+    await this.mailerService
+      .sendMail({
+        to: { address: 'chaucc135@gmail.com', name: 'thien' }, // list of receivers
+        subject: 'Testing Nest MailerModule ✔', // Subject line
+        text: 'welcome', // plaintext body
+        template: 'register',
+        context: {
+          name: 'Châu buồi',
+          activationCode: 2003,
+        },
+      })
+      .then((e) => {
+        console.log('email::::', e);
+      })
+      .catch(() => {});
+    return 'ok';
+  }
+
+  @Public()
   @UseGuards(LocalAuthGuard)
   @Post('/login')
   login(@Request() req: any) {
@@ -28,6 +58,13 @@ export class AuthController {
   @Get('/profile')
   profile(@Request() req) {
     return req.user;
+  }
+
+  @Get('/')
+  printHello() {
+    return {
+      message: 'heello',
+    };
   }
 
   @UseGuards(RefreshTokenAuthGuard)

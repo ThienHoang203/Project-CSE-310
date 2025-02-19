@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { dateFormatter } from 'src/utils/format';
 import { ConfigService } from '@nestjs/config';
+import LoginDto from './dto/login.dto';
 
 export type TokenPayloadType = {
   userId: bigint;
@@ -33,6 +34,7 @@ export class AuthService {
   constructor(
     @InjectRepository(RefeshToken)
     private readonly refreshTokenRepository: Repository<RefeshToken>,
+    @InjectRepository(User)
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -54,6 +56,16 @@ export class AuthService {
         exprires_in: formattedDate.format(refreshToken.exprires_in),
       },
     };
+  }
+
+  async validateUser({ username, password }: LoginDto): Promise<User | null> {
+    const user = await this.userService.findByUsername(username);
+    if (!user) return null;
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
+
+    return user;
   }
 
   generateAccessToken(payload: TokenPayloadType): string {
@@ -102,6 +114,6 @@ export class AuthService {
     }
 
     //if token is invalid, throw new exception
-    return false;
+    throw new UnauthorizedException('refresh token is invalid!');
   }
 }

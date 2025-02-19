@@ -11,20 +11,37 @@ import { JwtStrategy } from 'src/passports/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 import { RefeshToken } from 'src/entities/refesh-token.entity';
 import { RefreshTokenStrategy } from 'src/passports/refresh-token.strategy';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
+import { RolesGuard } from 'src/guard/roles.guard';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, RefreshTokenStrategy],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    RefreshTokenStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
   imports: [
     UserModule,
     PassportModule,
-    TypeOrmModule.forFeature([User, RefeshToken]),
+    TypeOrmModule.forFeature([RefeshToken]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET_KEY'),
         signOptions: { expiresIn: configService.get<string>('JWT_ACCESS_TOKEN_EXPIRE_TIME') },
       }),
+      global: true,
     }),
   ],
 })

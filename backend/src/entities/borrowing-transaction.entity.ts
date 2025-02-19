@@ -1,5 +1,8 @@
-import { Column, CreateDateColumn, Entity } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { AbstractEntityLight } from './entity-light.entity';
+import { User } from './user.entity';
+import { Book } from './book.entity';
+import { Fine } from './fine.entity';
 
 export enum BorrowingTransactionStatus {
   BOR = 'borrowing',
@@ -32,4 +35,15 @@ export class BorrowingTransaction extends AbstractEntityLight {
 
   @Column({ type: 'timestamp', nullable: true })
   returnedAt: Date;
+
+  @JoinColumn()
+  @ManyToOne(() => User, (user) => user.borrowingTransactions)
+  user: User;
+
+  @JoinColumn()
+  @ManyToOne(() => Book, (book) => book.borrowingTransactions)
+  book: Book;
+
+  @OneToMany(() => Fine, (fine) => fine.borrowingTransaction)
+  fines: Fine[];
 }

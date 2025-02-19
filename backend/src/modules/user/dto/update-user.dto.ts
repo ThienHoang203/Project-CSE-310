@@ -11,9 +11,8 @@ export default class UpdateUserDto extends PickType(CreateUserDto, [
   'role',
   'status',
 ]) {
-  @IsOptional({ always: true })
-  password: string;
-
-  @IsOptional({ always: true })
-  phoneNumber: string;
+  // @IsOptional({ always: true })
+  // password: string;
+  // @IsOptional({ always: true })
+  // phoneNumber: string;
 }

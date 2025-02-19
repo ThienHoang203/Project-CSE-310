@@ -1,3 +1,4 @@
+import { PickType } from '@nestjs/mapped-types';
 import {
   IsDateString,
   IsDecimal,
@@ -7,13 +8,23 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  isURL,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 import { Book, BookFormat, BookGerne, BookStatus } from 'src/entities/book.entity';
 
-export default class CreateBookDto extends Book {
+export default class CreateBookDto extends PickType(Book, [
+  'author',
+  'description',
+  'format',
+  'gerne',
+  'publishedDate',
+  'status',
+  'stock',
+  'title',
+  'coverImageFileURL',
+  'contentFileURL',
+  'version',
+]) {
   @MaxLength(50, { message: 'tên tác giả không được vượt quá 50 kí tự' })
   @IsString({ message: 'tên tác giả phải là chuỗi' })
   @IsNotEmpty({ message: 'tên tác giả không được để trống' })
@@ -33,11 +44,6 @@ export default class CreateBookDto extends Book {
   @IsOptional({ always: true })
   description: string;
 
-  @MaxLength(300, { message: 'đường dẫn đến ảnh bìa sách không được vượt quá 300 kí tự' })
-  @IsString({ message: 'đường dẫn đến ảnh bìa sách phải là chuỗi' })
-  @IsOptional({ always: true })
-  coverImageURL: string;
-
   @IsEnum(BookStatus, { message: 'trạng thái sách không đúng định dạng' })
   status: BookStatus;
 
@@ -53,9 +59,13 @@ export default class CreateBookDto extends Book {
   @IsOptional({ always: true })
   publishedDate: Date;
 
-  @IsUrl({}, { message: 'thể loại sách không đúng định dạng' })
+  @IsString({ message: 'coverImageFileURL phải là chuỗi' })
   @IsOptional({ always: true })
-  fileURL: string;
+  coverImageFileURL: string;
+
+  @IsString({ message: 'contentFileURL phải là chuỗi' })
+  @IsOptional({ always: true })
+  contentFileURL: string;
 
   @IsDecimal({}, { message: 'phiên bản sách không đúng định dạng' })
   @IsOptional({ always: true })

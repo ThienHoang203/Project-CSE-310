@@ -22,7 +22,9 @@ export class RefeshToken extends AbstractEntity {
   @Column({ type: 'json', nullable: true })
   deviceInfo: JSON;
 
-  @ManyToOne(() => User, (user) => user.id)
   @JoinColumn()
+  @ManyToOne(() => User, (user) => user.refeshTokens, {
+    onDelete: 'CASCADE',
+  })
   user: User;
 }
