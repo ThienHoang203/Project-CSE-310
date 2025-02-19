@@ -3,12 +3,12 @@ import { PassportStrategy } from '@nestjs/passport';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Strategy } from 'passport-local';
+import { AuthService } from 'src/modules/auth/auth.service';
 import LoginDto from 'src/modules/auth/dto/login.dto';
-import { UserService } from 'src/modules/user/user.service';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
-  constructor(private readonly userService: UserService) {
+  constructor(private readonly authService: AuthService) {
     super({
       //these attribute is option, these are used to help know which field is used for login, default these are username and password
       usernameField: 'username',
@@ -29,9 +29,8 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
         }),
       );
     }
-
     //validate user in database
-    const user = await this.userService.validateUser(username, password);
+    const user = await this.authService.validateUser(loginDto);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

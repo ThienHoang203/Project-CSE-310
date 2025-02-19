@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { AbstractEntityLight } from './entity-light.entity';
+import { User } from './user.entity';
+import { Book } from './book.entity';
 
 @Entity()
 export class Wishlist extends AbstractEntityLight {
@@ -11,4 +13,12 @@ export class Wishlist extends AbstractEntityLight {
 
   @Column({ type: 'text', nullable: false })
   bookId: bigint;
+
+  @JoinColumn()
+  @ManyToOne(() => User, (user) => user.wishlists)
+  user: User;
+
+  @JoinColumn()
+  @ManyToOne(() => Book, (book) => book.wishlists)
+  book: Book;
 }

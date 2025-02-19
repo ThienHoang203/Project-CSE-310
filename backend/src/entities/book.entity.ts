@@ -1,5 +1,9 @@
 import { AbstractEntity } from 'src/entities/entity';
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
+import { BorrowingTransaction } from './borrowing-transaction.entity';
+import { Reservation } from './reservation.entity';
+import { Wishlist } from './wishlist.entity';
+import { Rating } from './rating.entity';
 
 export enum BookGerne {
   MYSTERY = 'trinh thám',
@@ -43,7 +47,7 @@ export class Book extends AbstractEntity {
   description: string;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
-  coverImageURL: string;
+  coverImageFileURL: string;
 
   @Column({ type: 'int', nullable: true })
   stock: number;
@@ -52,8 +56,20 @@ export class Book extends AbstractEntity {
   publishedDate: Date;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
-  fileURL: string;
+  contentFileURL: string;
 
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 1.0, nullable: true })
   version: number;
+
+  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.book)
+  borrowingTransactions: BorrowingTransaction[];
+
+  @OneToOne(() => Rating, (rating) => rating.book)
+  rating: Rating;
+
+  @OneToMany(() => Reservation, (reservation) => reservation.book)
+  reservations: Reservation[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.book)
+  wishlists: Wishlist[];
 }

@@ -15,6 +15,16 @@ import { Fine } from './entities/fine.entity';
 import { Reservation } from './entities/reservation.entity';
 import { Wishlist } from './entities/wishlist.entity';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TransformInterceptor } from './interceptor/transform.interceptor';
+import { BorrowingTransactionModule } from './modules/borrowing-transaction/borrowing-transaction.module';
+import { FineModule } from './modules/fine/fine.module';
+import { RatingModule } from './modules/rating/rating.module';
+import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
+import { ReservationModule } from './modules/reservation/reservation.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -32,6 +42,32 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
         logging: true,
       }),
     }),
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        transport: {
+          host: configService.get<string>('MAIL_HOST'),
+          port: configService.get<number>('MAIL_PORT'),
+          // pool: true,
+          ignoreTLS: true,
+          secure: true,
+          auth: {
+            user: configService.get<string>('MAIL_USER'),
+            pass: configService.get<string>('MAIL_PASSWORD'),
+          },
+        },
+        defaults: {
+          from: '"No Reply" <no-reply@localhost>',
+        },
+        template: {
+          dir: process.cwd() + '/src/mail/templates/',
+          adapter: new HandlebarsAdapter(), // or new PugAdapter() or new EjsAdapter()
+          options: {
+            strict: true,
+          },
+        },
+      }),
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -39,9 +75,21 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     BookModule,
     AuthModule,
     WishlistModule,
+    BorrowingTransactionModule,
+    FineModule,
+    RatingModule,
+    RefreshTokenModule,
+    ReservationModule,
+    FilesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor,
+    },
+  ],
 })
 export class AppModule {
   // configure(consumer: MiddlewareConsumer) {

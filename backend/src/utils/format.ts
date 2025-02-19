@@ -1,3 +1,6 @@
+import { User } from 'src/entities/user.entity';
+import { FindOptionsSelect } from 'typeorm';
+
 export function dateFormatter(year: 2 | 4): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -10,3 +13,32 @@ export function dateFormatter(year: 2 | 4): Intl.DateTimeFormat {
     hour12: false,
   });
 }
+
+export const formattedUserRespsonse: FindOptionsSelect<User> = [
+  'id',
+  'username',
+  'name',
+  'phoneNumber',
+  'email',
+  'role',
+  'membershipLevel',
+  'status',
+  'created_at',
+  'updated_at',
+  'birthDate',
+] as FindOptionsSelect<User>;
+
+export const formattedUserLoginRespsonse: FindOptionsSelect<User> = [
+  'id',
+  'username',
+  'name',
+  'phoneNumber',
+  'email',
+  'role',
+  'status',
+  'password',
+  'membershipLevel',
+  'birthDate',
+  'created_at',
+  'updated_at',
+] as FindOptionsSelect<User>;

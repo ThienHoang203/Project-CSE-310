@@ -1,4 +1,7 @@
+import { PickType } from '@nestjs/mapped-types';
 import {
+  IsDate,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -10,7 +13,17 @@ import {
 } from 'class-validator';
 import { User, UserMembershipLevel, UserRole, UserStatus } from 'src/entities/user.entity';
 
-export default class CreateUserDto extends User {
+export default class CreateUserDto extends PickType(User, [
+  'birthDate',
+  'email',
+  'membershipLevel',
+  'name',
+  'password',
+  'phoneNumber',
+  'role',
+  'status',
+  'username',
+]) {
   @MaxLength(50, { message: 'tên đăng nhập không được vượt quá 50 kí tự' })
   @IsString({ message: 'tên đăng nhập phải là chuỗi' })
   @IsNotEmpty({ message: 'tên đăng nhập không được để trống', always: true })
@@ -29,7 +42,7 @@ export default class CreateUserDto extends User {
   @MaxLength(200, { message: 'địa chỉ email không được vượt quá 200 kí tự' })
   @IsEmail({}, { message: 'địa chỉ email không đúng định dạng' })
   @IsString({ message: 'email phải là chuỗi' })
-  @IsOptional({ always: true })
+  @IsNotEmpty({ message: 'email không được để trống' })
   email: string;
 
   @IsPhoneNumber('VN', { message: 'số điện thoại không đúng định dạng' })
@@ -37,6 +50,10 @@ export default class CreateUserDto extends User {
   @IsString({ message: 'số điện thoại phải là chuỗi' })
   @IsNotEmpty({ message: 'số điện thoại không được để trống' })
   phoneNumber: string;
+
+  @IsDateString({}, { message: 'ngày sinh không đúng định dạng' })
+  @IsNotEmpty({ message: 'ngày sinh không được để trống' })
+  birthDate: Date;
 
   @IsEnum(UserRole, { message: 'role sai định dạng ' + Object.values(UserRole) })
   @IsOptional({ always: true })

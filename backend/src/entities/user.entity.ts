@@ -1,6 +1,11 @@
 import { AbstractEntity } from 'src/entities/entity';
 import { Entity, Column, OneToMany } from 'typeorm';
 import { RefeshToken } from './refesh-token.entity';
+import { BorrowingTransaction } from './borrowing-transaction.entity';
+import { Fine } from './fine.entity';
+import { Reservation } from './reservation.entity';
+import { Wishlist } from './wishlist.entity';
+import { Rating } from './rating.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -36,6 +41,9 @@ export class User extends AbstractEntity {
   @Column({ type: 'varchar', length: 10, nullable: false, unique: true })
   phoneNumber: string;
 
+  @Column({ type: 'date', nullable: true })
+  birthDate: Date;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER, nullable: false })
   role: UserRole;
 
@@ -45,6 +53,24 @@ export class User extends AbstractEntity {
   @Column({ type: 'enum', enum: UserMembershipLevel, nullable: true })
   membershipLevel: UserMembershipLevel;
 
-  @OneToMany(() => RefeshToken, (token) => token.id)
+  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.user)
+  borrowingTransactions: BorrowingTransaction[];
+
+  @OneToMany(() => Fine, (fine) => fine.user)
+  fines: Fine[];
+
+  @OneToMany(() => Rating, (rating) => rating.user)
+  ratings: Rating[];
+
+  @OneToMany(() => RefeshToken, (token) => token.user, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   refeshTokens: RefeshToken[];
+
+  @OneToMany(() => Reservation, (reservation) => reservation.user)
+  reservations: Reservation[];
+
+  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
+  wishlists: Wishlist[];
 }
