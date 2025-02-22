@@ -13,8 +13,6 @@ import { Rating } from './entities/rating.entity';
 import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
 import { Fine } from './entities/fine.entity';
 import { Reservation } from './entities/reservation.entity';
-import { Wishlist } from './entities/wishlist.entity';
-import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -25,6 +23,8 @@ import { RatingModule } from './modules/rating/rating.module';
 import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
 import { ReservationModule } from './modules/reservation/reservation.module';
 import { FilesModule } from './modules/files/files.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { Bookshelf } from './entities/bookshelf.entity';
 
 @Module({
   imports: [
@@ -37,7 +37,7 @@ import { FilesModule } from './modules/files/files.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Book, RefeshToken, Rating, BorrowingTransaction, Fine, Reservation, Wishlist],
+        entities: [User, Book, RefeshToken, Rating, BorrowingTransaction, Fine, Reservation, Bookshelf],
         synchronize: true,
         logging: true,
       }),
@@ -48,7 +48,7 @@ import { FilesModule } from './modules/files/files.module';
         transport: {
           host: configService.get<string>('MAIL_HOST'),
           port: configService.get<number>('MAIL_PORT'),
-          // pool: true,
+          // pool: 15,
           ignoreTLS: true,
           secure: true,
           auth: {
@@ -61,7 +61,7 @@ import { FilesModule } from './modules/files/files.module';
         },
         template: {
           dir: process.cwd() + '/src/mail/templates/',
-          adapter: new HandlebarsAdapter(), // or new PugAdapter() or new EjsAdapter()
+          adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
           },
@@ -74,13 +74,13 @@ import { FilesModule } from './modules/files/files.module';
     UserModule,
     BookModule,
     AuthModule,
-    WishlistModule,
     BorrowingTransactionModule,
     FineModule,
     RatingModule,
     RefreshTokenModule,
     ReservationModule,
     FilesModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

@@ -12,8 +12,8 @@ import { ConfigService } from '@nestjs/config';
 import { RefeshToken } from 'src/entities/refesh-token.entity';
 import { RefreshTokenStrategy } from 'src/passports/refresh-token.strategy';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
-import { RolesGuard } from 'src/guard/roles.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @Module({
   controllers: [AuthController],

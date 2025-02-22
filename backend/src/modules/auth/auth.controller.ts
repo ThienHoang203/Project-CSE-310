@@ -2,9 +2,9 @@ import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import CreateUserDto from '../user/dto/create-user.dto';
-import { LocalAuthGuard } from 'src/guard/local-auth.guard';
-import { JwtAuthGuard } from 'src/guard/jwt-auth.guard';
-import { RefreshTokenAuthGuard } from 'src/guard/refresh-token-auth.guard';
+import { LocalAuthGuard } from 'src/guards/local-auth.guard';
+import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { RefreshTokenAuthGuard } from 'src/guards/refresh-token-auth.guard';
 import { Public } from 'src/decorator/public-route.decorator';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';

@@ -1,32 +1,36 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpException,
   HttpStatus,
+  NotFoundException,
   Param,
   Patch,
   Post,
-  Req,
+  Res,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { BookService } from './book.service';
 import UpdateBookDto from './dto/update-book.dto';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import InputBookDto from './dto/input-book.dto';
-import { Public } from 'src/decorator/public-route.decorator';
+import { UserRole } from 'src/entities/user.entity';
+import { Roles } from 'src/decorator/roles.decorator';
+import { join, parse } from 'path';
+import { Response } from 'express';
+import CreateBookDto from './dto/create-book.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
 import * as fs from 'fs';
-import FormData from 'form-data';
 
+@Roles(UserRole.ADMIN)
 @Controller('book')
 export class BookController {
   constructor(
     private readonly bookService: BookService,
-    private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -40,99 +44,103 @@ export class BookController {
     return this.bookService.findById(BigInt(id));
   }
 
-  @Public()
-  @Post('/free')
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'contentFile', maxCount: 1 },
-      { name: 'coverImageFile', maxCount: 1 },
-    ]),
-  )
-  async cr(
-    @UploadedFiles()
-    files: {
-      contentFile?: Express.Multer.File[];
-      coverImageFile?: Express.Multer.File[];
-    },
-  ) {
-    const port = this.configService.get<number>('PORT') || 3000;
-
-    let coverPath: string | null = null;
-    let contentPath: string | null = null;
-
-    if (files.coverImageFile && files.coverImageFile[0]) {
-      const coverFile = files.coverImageFile[0];
-      const formData = new FormData();
-      formData.append(
-        'coverImageFile',
-        fs.createReadStream(coverFile.path),
-        {
-          filename: coverFile.originalname,
-          contentType: coverFile.mimetype,
-        },
-      );
-      const coverUpload = await this.httpService.axiosRef.post(
-        `http://localhost:${port}/api/files/upload-cover`,
-        files.coverImageFile[0].buffer,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
-      );
-      coverPath = coverUpload.data.path;
-    }
+  @Roles()
+  @Get('/view/ebook/:filename')
+  async downloadEbookFile(@Param('filename') filename: string, @Res() res: Response) {
+    const filePath = join(
+      process.cwd(),
+      this.configService.get<string>('EBOOK_FOLDER') || 'uploads/ebooks',
+      filename,
+    );
+    if (!fs.existsSync(filePath)) throw new NotFoundException(`Can not found file name ${filename}`);
+    return res.sendFile(filePath);
   }
 
-  @Public()
+  @Roles()
+  @Get('/view/cover/:filename')
+  async downloadCoverImageFile(@Param('filename') filename: string, @Res() res: Response) {
+    const filePath = join(
+      process.cwd(),
+      this.configService.get<string>('COVER_IMAGES_FOLDER') || 'uploads/ebooks',
+      filename,
+    );
+    if (!fs.existsSync(filePath)) throw new NotFoundException(`Can not found file name ${filename}`);
+    return res.sendFile(filePath);
+  }
+
   @Post()
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'ebookFile', maxCount: 1 },
+        { name: 'coverImageFile', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: (req, file, cb) => {
+            console.log(join(process.cwd(), 'uploads', 'covers'));
+            if (file.mimetype.startsWith('image/')) {
+              cb(null, join(process.cwd(), 'uploads', 'covers'));
+            } else if (file.mimetype.startsWith('application/pdf')) {
+              cb(null, join(process.cwd(), 'uploads', 'ebooks'));
+            }
+          },
+          filename(req, file, cb) {
+            const parsedFile = parse(file.originalname);
+            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+            cb(null, `${parsedFile.name}-${uniqueSuffix}${parsedFile.ext}`);
+          },
+        }),
+        fileFilter: (req, file, callback) => {
+          if (file.mimetype.endsWith('/jpeg') || file.mimetype.endsWith('/png')) {
+            const maxMBs = 2;
+            const maxBytes = maxMBs * 1024 * 1024;
+            if (file.size > maxBytes)
+              callback(new BadRequestException(`File ảnh không được lớn hơn ${maxMBs}MB`), false);
+            callback(null, true);
+          } else if (file.mimetype.endsWith('/pdf')) {
+            const maxMBs = 60;
+            const maxBytes = maxMBs * 1024 * 1024;
+            if (file.size > maxBytes)
+              callback(new BadRequestException(`File ebook không được lớn hơn ${maxMBs}MB`), false);
+            callback(null, true);
+          } else {
+            callback(new BadRequestException('File không đúng định dạng!'), false);
+          }
+        },
+        limits: {
+          fields: 11,
+          files: 2,
+        },
+      },
+    ),
+  )
   async create(
+    @UploadedFiles()
+    {
+      ebookFile,
+      coverImageFile,
+    }: { ebookFile?: Express.Multer.File[]; coverImageFile?: Express.Multer.File[] },
     @Body()
-    bookData: InputBookDto,
-  ) {
+    bookData: CreateBookDto,
+  ): Promise<import('d:/STUDY/CSE310/Project-CSE-310/backend/src/entities/book.entity').Book> {
     if (!bookData || Object.keys.length <= 0) {
       throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
     }
-
-    const {
-      coverImageFile,
-      contentFile,
-      author,
-      description,
-      format,
-      gerne,
-      publishedDate,
-      status,
-      stock,
-      title,
-      version,
-    } = bookData;
-    const port = this.configService.get<number>('PORT') || 3000;
-    const coverUpload = await this.httpService.axiosRef.post(
-      `http://localhost:${port}/api/files/upload-cover`,
-
-      coverImageFile,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    console.log(coverUpload.data);
-
-    const coverPath = coverUpload.data.path;
-
-    const contentUpload = await this.httpService.axiosRef.post(
-      `http://localhost:${port}/api/files/upload-content`,
-      contentFile,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
-    );
-    const contentPath = coverUpload.data.path;
+    const { author, description, format, gerne, publishedDate, status, stock, title, version } = bookData;
 
     return this.bookService.create({
       author,
-      contentFileURL: contentPath ?? null,
-      coverImageFileURL: coverPath ?? null,
-      description: description ?? null,
+      title,
       format,
+      description,
       gerne,
       publishedDate,
       status,
       stock,
-      title,
       version,
+      contentFileURL: ebookFile ? ebookFile[0].filename : undefined,
+      coverImageFileURL: coverImageFile ? coverImageFile[0].filename : undefined,
     });
   }
 
