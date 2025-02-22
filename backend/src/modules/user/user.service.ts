@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  HttpException,
   HttpStatus,
   Injectable,
   InternalServerErrorException,
@@ -10,10 +9,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../entities/user.entity';
 import { Equal, Not, Repository } from 'typeorm';
 import UpdateUserDto from './dto/update-user.dto';
-import * as bcrypt from 'bcrypt';
 import CreateUserDto from './dto/create-user.dto';
-import { formattedUserLoginRespsonse, formattedUserRespsonse } from 'src/utils/format';
+import { formattedUserRespsonse } from 'src/utils/format';
 import { MailerService } from '@nestjs-modules/mailer';
+import { compareHashedString, hashPassword } from 'src/utils/hashing';
 
 @Injectable()
 export class UserService {
@@ -25,65 +24,59 @@ export class UserService {
   ) {}
 
   async findById(id: bigint): Promise<User> {
-    const user: User | null = await this.userRepository.findOne({
-      where: { id: id },
-      select: formattedUserLoginRespsonse,
-    });
-    // this.logger.error('find user by ID::', user);
-    if (!user) {
-      throw new HttpException(`User(ID: ${id}) doesn't exist`, HttpStatus.NOT_FOUND);
-    }
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException(`Người dùng(ID: ${id}) không tồn tại`);
     return user;
   }
 
-  findByUsername(username: string): Promise<User | null> {
-    return this.userRepository.findOne({
-      where: { username: username },
-      select: formattedUserLoginRespsonse,
-    });
+  async findByUsername(username: string): Promise<User> {
+    const user = await this.userRepository.findOneBy({ username });
+    if (!user) throw new NotFoundException(`Người dùng(username: ${username}) không tồn tại`);
+    return user;
   }
 
-  async findAll(): Promise<any> {
+  async findAll(): Promise<{ users: User[]; totalUsers: number }> {
     const [users, count] = await this.userRepository.findAndCount({
       select: formattedUserRespsonse,
     });
+    if (!users) throw new NotFoundException(`Không tìm thấy bất kì người dùng nào`);
     return {
       users: users,
-      totalUser: count,
+      totalUsers: count,
     };
   }
 
-  async findUsers(currentPage: number, pageSize: number): Promise<any> {
-    return this.userRepository.find({
+  async findLimited(currentPage: number, pageSize: number): Promise<User[]> {
+    const users = await this.userRepository.find({
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
     });
+    if (!users) throw new NotFoundException(`Không tìm thấy bất kì người dùng nào`);
+    return users;
   }
 
-  async create(userData: CreateUserDto): Promise<any> {
+  async create(userData: CreateUserDto): Promise<{ message: string; userId: any; status: HttpStatus }> {
     //Check if the email or phone number or username has already existed
     let user: User | null = await this.userRepository.findOneBy([
       { email: userData.email ?? '' },
       { phoneNumber: userData.phoneNumber ?? '' },
-      { username: userData.username ?? '' },
+      { username: userData.username },
     ]);
     if (user) {
       if (userData.username === user.username) {
-        throw new ConflictException(`username: ${userData.username} đã tồn tại`);
-      } else if (userData.email === user.email) {
-        throw new ConflictException(`email: ${userData.email} đã tồn tại`);
-      } else if (userData.phoneNumber === user.phoneNumber) {
-        throw new ConflictException(`số điện thoại: ${userData.phoneNumber} đã tồn tại`);
+        throw new ConflictException(`Người dùng: ${userData.username} đã tồn tại`);
+      } else if (userData?.email && userData.email === user.email) {
+        throw new ConflictException(`Email: ${userData.email} đã tồn tại`);
+      } else if (userData?.phoneNumber && userData.phoneNumber === user.phoneNumber) {
+        throw new ConflictException(`Số điện thoại: ${userData.phoneNumber} đã tồn tại`);
       }
     }
-
     //If those fields have not in any record, it will create a new user
-    const hashPassword = await this.hashPassword(userData.password);
-    userData.password = hashPassword;
     user = this.userRepository.create(userData);
+    user.password = await hashPassword(userData.password);
     const result = await this.userRepository.insert(user);
     if (result.raw.affectedRows !== 1)
-      throw new InternalServerErrorException('database bị lỗi, vui lòng thử lại!');
+      throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
     this.mailerService.sendMail({
       to: user.email,
       subject: 'Active your account',
@@ -93,54 +86,68 @@ export class UserService {
       },
     });
     return {
-      message: 'user was created',
+      message: 'Tạo tài khoản thành công.Bạn có thể kiểm tra email, xin cảm ơn!',
       userId: result.identifiers[0].id,
       status: HttpStatus.CREATED,
     };
   }
 
-  hashPassword(pass: string): Promise<string> {
-    return bcrypt.hash(pass, 10);
-  }
-
-  async update(id: bigint, userData: UpdateUserDto): Promise<any> {
-    const user: User | null = await this.userRepository.findOneBy({ id });
-    if (!user) throw new NotFoundException(`không tìm thấy user(id = ${id})`);
+  async update(
+    id: bigint,
+    userData: UpdateUserDto,
+  ): Promise<{ message: string; userId: any; status: HttpStatus }> {
+    const user: boolean = await this.userRepository.existsBy({ id });
+    if (!user) throw new NotFoundException(`Người dùng(ID = ${id}) không tồn tại`);
 
     let isExisting: boolean = false;
 
-    if ('email' in userData)
+    if ('email' in userData) {
       isExisting = await this.userRepository.exists({
         where: { email: Equal(userData.email), id: Not(Equal(id)) },
       });
-    if (isExisting) throw new ConflictException(`email: ${userData.email} đã tồn tại`);
+      if (isExisting) throw new ConflictException(`email: ${userData.email} đã tồn tại!`);
+    }
 
-    if ('phoneNumber' in userData)
+    if ('phoneNumber' in userData) {
       isExisting = await this.userRepository.exists({
         where: { phoneNumber: Equal(userData.phoneNumber), id: Not(Equal(id)) },
       });
-    if (isExisting) throw new ConflictException(`số điện thoại: ${userData.phoneNumber} đã tồn tại`);
-
-    Object.entries(userData).forEach(([key, value]) => {
-      if (value) user[`${key}`] = value;
-    });
-
-    if ('password' in userData) user.password = await this.hashPassword(userData.password);
-
-    const result = await this.userRepository.save(user);
-
-    if (!result) {
-      throw new HttpException('unsuccessfully updated', HttpStatus.BAD_REQUEST);
+      if (isExisting) throw new ConflictException(`số điện thoại: ${userData.phoneNumber} đã tồn tại!`);
     }
-    return result;
+
+    const result = await this.userRepository.update({ id }, userData);
+    if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
+    return {
+      message: 'Cập nhật thông tin người dùng thành công.',
+      status: HttpStatus.OK,
+      userId: id.toString(),
+    };
   }
 
-  async delete(id: bigint): Promise<any> {
-    const user: User | null = await this.userRepository.findOneBy({ id });
-    if (!user) {
-      throw new HttpException(`User(ID: ${id}) doesn't exist`, HttpStatus.NOT_FOUND);
-    }
-    await this.userRepository.delete({ id: id });
-    return { message: `User(ID: ${id}) was deleted`, status: HttpStatus.OK };
+  async updatePassword(
+    id: bigint,
+    newPlainPassword: string,
+    oldPlainPassword: string,
+  ): Promise<{ message: string; userId: any; status: HttpStatus }> {
+    const user = await this.userRepository.findOne({ where: { id: Equal(id) }, select: ['password'] });
+    if (!user) throw new NotFoundException(`Người dùng(ID = ${id}) không tồn tại`);
+    const match = await compareHashedString(oldPlainPassword, user.password);
+    if (!match) throw new ConflictException(`Mật khẩu cũ không chính xác.`);
+    const newHasedPassword = await hashPassword(newPlainPassword);
+    const result = await this.userRepository.update({ id: id }, { password: newHasedPassword });
+    if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
+    return {
+      message: 'Cập nhật mật khẩu thành công.',
+      status: HttpStatus.OK,
+      userId: id.toString(),
+    };
+  }
+
+  async delete(id: bigint): Promise<{ message: string; userId: any; status: HttpStatus }> {
+    const user: boolean = await this.userRepository.existsBy({ id });
+    if (!user) throw new NotFoundException(`Người dùng(ID: ${id}) không tồn tại!`);
+    const result = await this.userRepository.delete({ id: id });
+    if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
+    return { message: 'Xóa thành công.', userId: id.toString(), status: HttpStatus.OK };
   }
 }

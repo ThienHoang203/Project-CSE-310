@@ -2,6 +2,7 @@ import { PickType } from '@nestjs/mapped-types';
 import {
   IsDateString,
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
@@ -9,9 +10,9 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { User } from 'src/entities/user.entity';
+import { User, UserRole, UserStatus } from 'src/entities/user.entity';
 
-export default class CreateUserDto extends PickType(User, [
+export class CreateAdminDto extends PickType(User, [
   'birthDate',
   'email',
   'name',

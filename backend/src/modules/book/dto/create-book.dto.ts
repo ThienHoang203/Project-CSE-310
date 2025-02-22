@@ -21,8 +21,6 @@ export default class CreateBookDto extends PickType(Book, [
   'status',
   'stock',
   'title',
-  'coverImageFileURL',
-  'contentFileURL',
   'version',
 ]) {
   @MaxLength(50, { message: 'tên tác giả không được vượt quá 50 kí tự' })
@@ -45,6 +43,7 @@ export default class CreateBookDto extends PickType(Book, [
   description: string;
 
   @IsEnum(BookStatus, { message: 'trạng thái sách không đúng định dạng' })
+  @IsOptional()
   status: BookStatus;
 
   @IsEnum(BookFormat, { message: 'format sách không đúng định dạng' })
@@ -59,15 +58,10 @@ export default class CreateBookDto extends PickType(Book, [
   @IsOptional({ always: true })
   publishedDate: Date;
 
-  @IsString({ message: 'coverImageFileURL phải là chuỗi' })
-  @IsOptional({ always: true })
-  coverImageFileURL: string;
-
-  @IsString({ message: 'contentFileURL phải là chuỗi' })
-  @IsOptional({ always: true })
-  contentFileURL: string;
-
   @IsDecimal({}, { message: 'phiên bản sách không đúng định dạng' })
   @IsOptional({ always: true })
   version: number;
+
+  // @IsOptional()
+  // ebookFile: File;
 }

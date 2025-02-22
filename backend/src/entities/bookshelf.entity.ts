@@ -4,7 +4,7 @@ import { User } from './user.entity';
 import { Book } from './book.entity';
 
 @Entity()
-export class Wishlist extends AbstractEntityLight {
+export class Bookshelf extends AbstractEntityLight {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: bigint;
 
@@ -15,10 +15,10 @@ export class Wishlist extends AbstractEntityLight {
   bookId: bigint;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.wishlists)
+  @ManyToOne(() => User, (user) => user.bookshelf)
   user: User;
 
   @JoinColumn()
-  @ManyToOne(() => Book, (book) => book.wishlists)
+  @ManyToOne(() => Book, (book) => book.bookshelf)
   book: Book;
 }

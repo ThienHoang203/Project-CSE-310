@@ -2,8 +2,8 @@ import { AbstractEntity } from 'src/entities/entity';
 import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
 import { BorrowingTransaction } from './borrowing-transaction.entity';
 import { Reservation } from './reservation.entity';
-import { Wishlist } from './wishlist.entity';
 import { Rating } from './rating.entity';
+import { Bookshelf } from './bookshelf.entity';
 
 export enum BookGerne {
   MYSTERY = 'trinh thám',
@@ -70,6 +70,6 @@ export class Book extends AbstractEntity {
   @OneToMany(() => Reservation, (reservation) => reservation.book)
   reservations: Reservation[];
 
-  @OneToMany(() => Wishlist, (wishlist) => wishlist.book)
-  wishlists: Wishlist[];
+  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.book)
+  bookshelf: Bookshelf[];
 }

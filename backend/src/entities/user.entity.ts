@@ -4,8 +4,8 @@ import { RefeshToken } from './refesh-token.entity';
 import { BorrowingTransaction } from './borrowing-transaction.entity';
 import { Fine } from './fine.entity';
 import { Reservation } from './reservation.entity';
-import { Wishlist } from './wishlist.entity';
 import { Rating } from './rating.entity';
+import { Bookshelf } from './bookshelf.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -71,6 +71,6 @@ export class User extends AbstractEntity {
   @OneToMany(() => Reservation, (reservation) => reservation.user)
   reservations: Reservation[];
 
-  @OneToMany(() => Wishlist, (wishlist) => wishlist.user)
-  wishlists: Wishlist[];
+  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.user)
+  bookshelf: Bookshelf[];
 }

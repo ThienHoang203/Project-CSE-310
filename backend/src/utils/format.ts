@@ -1,6 +1,6 @@
 import { User } from 'src/entities/user.entity';
 import { FindOptionsSelect } from 'typeorm';
-
+import 'dayjs/locale/vi';
 export function dateFormatter(year: 2 | 4): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',

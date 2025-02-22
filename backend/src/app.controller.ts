@@ -14,6 +14,7 @@ export class AppController {
   @Get()
   getHello(): string {
     console.log(this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRE_TIME'));
+    console.log(process.env.HASHING_PASSWORD_SALT);
 
     return this.appService.getHello();
   }

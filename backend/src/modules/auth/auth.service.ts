@@ -5,12 +5,11 @@ import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { RefeshToken } from 'src/entities/refesh-token.entity';
-import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { dateFormatter } from 'src/utils/format';
 import { ConfigService } from '@nestjs/config';
 import LoginDto from './dto/login.dto';
-
+import { compareHashedString, hashToken } from 'src/utils/hashing';
 export type TokenPayloadType = {
   userId: bigint;
   role: string;
@@ -34,22 +33,22 @@ export class AuthService {
   constructor(
     @InjectRepository(RefeshToken)
     private readonly refreshTokenRepository: Repository<RefeshToken>,
-    @InjectRepository(User)
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
   async login({ id, role, membershipLevel }: User): Promise<any> {
+    const formattedDate = dateFormatter(4);
     const accessToken = this.generateAccessToken({ membershipLevel, role, userId: id });
+    const accessTokenExpireTime = this.jwtService.decode(accessToken, { json: true });
 
     const refreshToken = await this.storeRefreshToken(id);
-
-    const formattedDate = dateFormatter(4);
+    // formattedDate.format(new Date(new Date().getTime() + 5 * 60 * 1000))
     return {
       access_token: {
         token: accessToken,
-        exprires_in: formattedDate.format(new Date(new Date().getTime() + 5 * 60 * 1000)),
+        exprires_in: formattedDate.format(new Date(accessTokenExpireTime.exp * 1000)),
       },
       refresh_token: {
         token: refreshToken.refreshToken,
@@ -62,7 +61,7 @@ export class AuthService {
     const user = await this.userService.findByUsername(username);
     if (!user) return null;
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await compareHashedString(password, user.password);
     if (!isMatch) return null;
 
     return user;
@@ -92,7 +91,7 @@ export class AuthService {
     const token = this.generateRefreshToken({ id: refreshToken.hashedTokenId, userId: userId });
     console.log('token::::', this.jwtService.decode(token));
 
-    const hashedToken = await bcrypt.hash(token, 10);
+    const hashedToken = await hashToken(token);
     refreshToken.hashedToken = hashedToken;
 
     await this.refreshTokenRepository.save(refreshToken);
@@ -109,7 +108,7 @@ export class AuthService {
     });
 
     if (token) {
-      const isMatch = await bcrypt.compare(refreshToken, token.hashedToken);
+      const isMatch = await compareHashedString(refreshToken, token.hashedToken);
       if (isMatch) return { tokenId, userId };
     }
 

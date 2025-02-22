@@ -4,15 +4,13 @@ import { IsOptional } from 'class-validator';
 
 export default class UpdateUserDto extends PickType(CreateUserDto, [
   'email',
-  'membershipLevel',
   'name',
-  'password',
   'phoneNumber',
-  'role',
-  'status',
+  'birthDate',
 ]) {
-  // @IsOptional({ always: true })
-  // password: string;
-  // @IsOptional({ always: true })
-  // phoneNumber: string;
+  @IsOptional()
+  phoneNumber: string;
+
+  @IsOptional()
+  birthDate: Date;
 }

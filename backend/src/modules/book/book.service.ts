@@ -24,7 +24,9 @@ export class BookService {
     return this.bookRepository.find();
   }
 
-  create(bookData: CreateBookDto): Promise<Book> {
+  async create(
+    bookData: CreateBookDto & { coverImageFileURL?: string; contentFileURL?: string },
+  ): Promise<Book> {
     const book = this.bookRepository.create(bookData);
     return this.bookRepository.save(book);
   }

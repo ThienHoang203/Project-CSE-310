@@ -11,7 +11,8 @@ import {
   Patch,
   Post,
   Query,
-  Request,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import CreateUserDto from './dto/create-user.dto';
@@ -20,6 +21,10 @@ import { TokenPayloadType } from '../auth/auth.service';
 import { Public } from 'src/decorator/public-route.decorator';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/entities/user.entity';
+import UpdatePasswordUserDto from './dto/update-password-user.dto';
+import { plainToInstance } from 'class-transformer';
+import { UserInfoDto } from './dto/user-info.dto';
+import { Request } from 'express';
 
 @Controller('user')
 export class UserController {
@@ -36,16 +41,18 @@ export class UserController {
     if (isNaN(size) || size <= 0) {
       throw new BadRequestException('query param pageSize phải là số nguyên dương');
     }
-    return this.userService.findUsers(page, size);
+    return this.userService.findLimited(page, size);
   }
 
   @Get('/:id')
-  find(@Request() req: any, @Param('id') id: string) {
+  async find(@Req() req: Request, @Param('id') id: string) {
     const paramID = BigInt(id);
-    const payload: TokenPayloadType = req.user;
-    if (payload.role === UserRole.USER)
-      if (BigInt(payload.userId) !== paramID) throw new ForbiddenException("userID doesn't match");
-    return this.userService.findById(paramID);
+    const payload: Express.User | undefined = req.user;
+    if (!payload) throw new UnauthorizedException('Empty token!');
+    const plainPayload = req.user as TokenPayloadType;
+    if (BigInt(plainPayload.userId) !== paramID) throw new ForbiddenException("userID doesn't match");
+    const user = await this.userService.findById(paramID);
+    return plainToInstance(UserInfoDto, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.DEV)
@@ -68,20 +75,42 @@ export class UserController {
 
   @Patch('/:id')
   update(
-    @Request() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body()
     userData: UpdateUserDto,
   ) {
-    const userID = BigInt(id);
-    const payload: TokenPayloadType = req.user;
-
     if (!userData || Object.keys(userData).length === 0)
       throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
 
-    if (BigInt(payload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
+    const userID = BigInt(id);
+    const payload: Express.User | undefined = req.user;
+    if (!payload) throw new UnauthorizedException('Empty token!');
+    const plainPayload = req.user as TokenPayloadType;
+
+    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
 
     return this.userService.update(userID, userData);
+  }
+
+  @Patch('/change-password/:id')
+  updatePassword(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body()
+    userData: UpdatePasswordUserDto,
+  ) {
+    if (!userData || Object.keys(userData).length === 0)
+      throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
+
+    const userID = BigInt(id);
+    const payload: Express.User | undefined = req.user;
+    if (!payload) throw new UnauthorizedException('Empty token!');
+    const plainPayload = req.user as TokenPayloadType;
+
+    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
+
+    return this.userService.updatePassword(userID, userData.newPassword, userData.oldPassword);
   }
 
   @Delete('/:id')
