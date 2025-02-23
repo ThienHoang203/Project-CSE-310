@@ -46,7 +46,7 @@ export default class CreateUserDto extends PickType(User, [
   @IsNotEmpty({ message: 'số điện thoại không được để trống' })
   phoneNumber: string;
 
-  @IsDateString({}, { message: 'ngày sinh không đúng định dạng' })
+  @IsDateString({}, { message: 'Ngày sinh phải có định dạng là YYYY-MM-DD' })
   @IsNotEmpty({ message: 'ngày sinh không được để trống' })
   birthDate: Date;
 }

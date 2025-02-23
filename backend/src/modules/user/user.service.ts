@@ -55,7 +55,7 @@ export class UserService {
     return users;
   }
 
-  async create(userData: CreateUserDto): Promise<{ message: string; userId: any; status: HttpStatus }> {
+  async create(userData: CreateUserDto): Promise<{ userId: any }> {
     //Check if the email or phone number or username has already existed
     let user: User | null = await this.userRepository.findOneBy([
       { email: userData.email ?? '' },
@@ -86,16 +86,11 @@ export class UserService {
       },
     });
     return {
-      message: 'Tạo tài khoản thành công.Bạn có thể kiểm tra email, xin cảm ơn!',
       userId: result.identifiers[0].id,
-      status: HttpStatus.CREATED,
     };
   }
 
-  async update(
-    id: bigint,
-    userData: UpdateUserDto,
-  ): Promise<{ message: string; userId: any; status: HttpStatus }> {
+  async update(id: bigint, userData: UpdateUserDto): Promise<{ userId: any }> {
     const user: boolean = await this.userRepository.existsBy({ id });
     if (!user) throw new NotFoundException(`Người dùng(ID = ${id}) không tồn tại`);
 
@@ -118,8 +113,6 @@ export class UserService {
     const result = await this.userRepository.update({ id }, userData);
     if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
     return {
-      message: 'Cập nhật thông tin người dùng thành công.',
-      status: HttpStatus.OK,
       userId: id.toString(),
     };
   }
@@ -128,7 +121,7 @@ export class UserService {
     id: bigint,
     newPlainPassword: string,
     oldPlainPassword: string,
-  ): Promise<{ message: string; userId: any; status: HttpStatus }> {
+  ): Promise<{ userId: any }> {
     const user = await this.userRepository.findOne({ where: { id: Equal(id) }, select: ['password'] });
     if (!user) throw new NotFoundException(`Người dùng(ID = ${id}) không tồn tại`);
     const match = await compareHashedString(oldPlainPassword, user.password);
@@ -137,17 +130,15 @@ export class UserService {
     const result = await this.userRepository.update({ id: id }, { password: newHasedPassword });
     if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
     return {
-      message: 'Cập nhật mật khẩu thành công.',
-      status: HttpStatus.OK,
       userId: id.toString(),
     };
   }
 
-  async delete(id: bigint): Promise<{ message: string; userId: any; status: HttpStatus }> {
+  async delete(id: bigint): Promise<{ userId: any }> {
     const user: boolean = await this.userRepository.existsBy({ id });
     if (!user) throw new NotFoundException(`Người dùng(ID: ${id}) không tồn tại!`);
     const result = await this.userRepository.delete({ id: id });
     if (result.affected !== 1) throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
-    return { message: 'Xóa thành công.', userId: id.toString(), status: HttpStatus.OK };
+    return { userId: id.toString() };
   }
 }
