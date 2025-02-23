@@ -18,8 +18,8 @@ export class AuthController {
     // private readonly configService: ConfigService,
   ) {}
 
-  @Public()
   @Post('/register')
+  @Public()
   register(@Body() userData: CreateUserDto) {
     return this.userService.create(userData);
   }
@@ -27,13 +27,11 @@ export class AuthController {
   @Public()
   @Get('/mail')
   async getMail() {
-    // console.log(this.configService.get('MAIL_USER'));
-
     await this.mailerService
       .sendMail({
-        to: { address: 'chaucc135@gmail.com', name: 'thien' }, // list of receivers
-        subject: 'Testing Nest MailerModule ✔', // Subject line
-        text: 'welcome', // plaintext body
+        to: { address: 'chaucc135@gmail.com', name: 'thien' },
+        subject: 'Testing Nest MailerModule ✔',
+        text: 'welcome',
         template: 'register',
         context: {
           name: 'Châu buồi',
@@ -54,21 +52,14 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('/profile')
+  @UseGuards(JwtAuthGuard)
   profile(@Request() req) {
     return req.user;
   }
 
-  @Get('/')
-  printHello() {
-    return {
-      message: 'heello',
-    };
-  }
-
-  @UseGuards(RefreshTokenAuthGuard)
   @Post('/refresh-token')
+  @UseGuards(RefreshTokenAuthGuard)
   refreshToken(@Request() req: any) {
     const { id, refreshToken, userId } = req.user;
     return this.authService.verifyRefeshToken(id, userId, refreshToken);

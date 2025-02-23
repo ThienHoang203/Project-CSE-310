@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
@@ -25,6 +25,7 @@ import { ReservationModule } from './modules/reservation/reservation.module';
 import { FilesModule } from './modules/files/files.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { Bookshelf } from './entities/bookshelf.entity';
+import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
 
 @Module({
   imports: [
@@ -93,9 +94,6 @@ import { Bookshelf } from './entities/bookshelf.entity';
 })
 export class AppModule {
   // configure(consumer: MiddlewareConsumer) {
-  //   consumer.apply(LoggingMiddleware).forRoutes({
-  //     path: '/book',
-  //     method: RequestMethod.ALL,
-  //   });
+  //   consumer.apply(CheckFieldsExistMiddleware).forRoutes({ path: 'book', method: RequestMethod.POST });
   // }
 }

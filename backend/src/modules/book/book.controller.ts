@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
   HttpStatus,
   NotFoundException,
   Param,
@@ -19,12 +18,19 @@ import UpdateBookDto from './dto/update-book.dto';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/entities/user.entity';
 import { Roles } from 'src/decorator/roles.decorator';
-import { join, parse } from 'path';
+import path, { join, parse } from 'path';
 import { Response } from 'express';
 import CreateBookDto from './dto/create-book.dto';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import * as fs from 'fs';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { coverImageMimeFileTypes, ebookMimeFileTypes } from 'src/utils/fileFilter';
+import { memoryStorage } from 'multer';
+import { saveFile } from 'src/utils/saveFile';
+
+type FileNameObjectType = {
+  ebookFilename: string;
+  coverImageFilename: string;
+};
 
 @Roles(UserRole.ADMIN)
 @Controller('book')
@@ -44,27 +50,17 @@ export class BookController {
     return this.bookService.findById(BigInt(id));
   }
 
+  @Get('/view/:filename')
   @Roles()
-  @Get('/view/ebook/:filename')
   async downloadEbookFile(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = join(
-      process.cwd(),
-      this.configService.get<string>('EBOOK_FOLDER') || 'uploads/ebooks',
-      filename,
-    );
-    if (!fs.existsSync(filePath)) throw new NotFoundException(`Can not found file name ${filename}`);
-    return res.sendFile(filePath);
-  }
+    const folder =
+      this.configService.get<string>(filename.endsWith('.pdf') ? 'EBOOK_FOLDER' : 'COVER_IMAGES_FOLDER') ||
+      '';
 
-  @Roles()
-  @Get('/view/cover/:filename')
-  async downloadCoverImageFile(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = join(
-      process.cwd(),
-      this.configService.get<string>('COVER_IMAGES_FOLDER') || 'uploads/ebooks',
-      filename,
-    );
+    const filePath = join(process.cwd(), folder, filename);
+
     if (!fs.existsSync(filePath)) throw new NotFoundException(`Can not found file name ${filename}`);
+
     return res.sendFile(filePath);
   }
 
@@ -76,36 +72,50 @@ export class BookController {
         { name: 'coverImageFile', maxCount: 1 },
       ],
       {
-        storage: diskStorage({
-          destination: (req, file, cb) => {
-            console.log(join(process.cwd(), 'uploads', 'covers'));
-            if (file.mimetype.startsWith('image/')) {
-              cb(null, join(process.cwd(), 'uploads', 'covers'));
-            } else if (file.mimetype.startsWith('application/pdf')) {
-              cb(null, join(process.cwd(), 'uploads', 'ebooks'));
-            }
-          },
-          filename(req, file, cb) {
-            const parsedFile = parse(file.originalname);
-            const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-            cb(null, `${parsedFile.name}-${uniqueSuffix}${parsedFile.ext}`);
-          },
-        }),
+        storage: memoryStorage(),
         fileFilter: (req, file, callback) => {
-          if (file.mimetype.endsWith('/jpeg') || file.mimetype.endsWith('/png')) {
-            const maxMBs = 2;
-            const maxBytes = maxMBs * 1024 * 1024;
-            if (file.size > maxBytes)
-              callback(new BadRequestException(`File ảnh không được lớn hơn ${maxMBs}MB`), false);
-            callback(null, true);
-          } else if (file.mimetype.endsWith('/pdf')) {
-            const maxMBs = 60;
-            const maxBytes = maxMBs * 1024 * 1024;
-            if (file.size > maxBytes)
-              callback(new BadRequestException(`File ebook không được lớn hơn ${maxMBs}MB`), false);
+          let maxMBs = 2;
+          let maxBytes = maxMBs * 1024 * 1024;
+          if (file.fieldname === 'coverImageFile') {
+            if (file.size > maxBytes) {
+              callback(
+                new BadRequestException({
+                  coverImageFile: `Không được lớn hơn ${maxMBs}MB`,
+                  statusCode: HttpStatus.BAD_REQUEST,
+                }),
+                false,
+              );
+            } else if (!coverImageMimeFileTypes.includes(file.mimetype)) {
+              callback(
+                new BadRequestException({
+                  coverImageFile: `Phải có định dạng là ${coverImageMimeFileTypes.join(' hoặc ')}`,
+                  statusCode: HttpStatus.BAD_REQUEST,
+                }),
+                false,
+              );
+            }
             callback(null, true);
           } else {
-            callback(new BadRequestException('File không đúng định dạng!'), false);
+            maxMBs = 60;
+            maxBytes = maxMBs * 1024 * 1024;
+            if (file.size > maxBytes) {
+              callback(
+                new BadRequestException({
+                  ebookFile: `Không được lớn hơn ${maxMBs}MB`,
+                  statusCode: HttpStatus.BAD_REQUEST,
+                }),
+                false,
+              );
+            } else if (!ebookMimeFileTypes.includes(file.mimetype)) {
+              callback(
+                new BadRequestException({
+                  ebookFile: `Phải có định dạng là ${ebookMimeFileTypes.join(' hoặc ')}`,
+                  statusCode: HttpStatus.BAD_REQUEST,
+                }),
+                false,
+              );
+            }
+            callback(null, true);
           }
         },
         limits: {
@@ -123,24 +133,41 @@ export class BookController {
     }: { ebookFile?: Express.Multer.File[]; coverImageFile?: Express.Multer.File[] },
     @Body()
     bookData: CreateBookDto,
-  ): Promise<import('d:/STUDY/CSE310/Project-CSE-310/backend/src/entities/book.entity').Book> {
-    if (!bookData || Object.keys.length <= 0) {
-      throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
-    }
-    const { author, description, format, gerne, publishedDate, status, stock, title, version } = bookData;
+  ) {
+    if (!bookData || Object.keys.length <= 0) throw new BadRequestException('empty data');
+    console.log('ebookFile:::', ebookFile ? ebookFile[0].filename : undefined);
 
+    //logic save  file
+    const uploadFoldername = this.configService.get<string>('UPLOAD_FOLDER') || 'uploads';
+
+    if (!fs.existsSync(uploadFoldername)) fs.mkdirSync(uploadFoldername);
+
+    let { coverImageFilename, ebookFilename }: FileNameObjectType = {
+      coverImageFilename: '',
+      ebookFilename: '',
+    };
+
+    if (ebookFile && ebookFile.length > 0) {
+      const uploadFolder = this.configService.get<string>('EBOOK_FOLDER') ?? 'uploads';
+
+      const uploadPath = join(process.cwd(), uploadFolder);
+
+      ebookFilename = saveFile(ebookFile[0], uploadPath);
+    }
+
+    if (coverImageFile && coverImageFile.length > 0) {
+      const uploadFolder = this.configService.get<string>('COVER_IMAGES_FOLDER') ?? 'uploads';
+
+      const uploadPath = join(process.cwd(), uploadFolder);
+
+      coverImageFilename = saveFile(coverImageFile[0], uploadPath);
+    }
+
+    //send book object and save it into db
     return this.bookService.create({
-      author,
-      title,
-      format,
-      description,
-      gerne,
-      publishedDate,
-      status,
-      stock,
-      version,
-      contentFileURL: ebookFile ? ebookFile[0].filename : undefined,
-      coverImageFileURL: coverImageFile ? coverImageFile[0].filename : undefined,
+      ...bookData,
+      contentFilename: ebookFilename !== '' ? ebookFilename : undefined,
+      coverImageFilename: coverImageFilename !== '' ? coverImageFilename : undefined,
     });
   }
 
@@ -150,9 +177,8 @@ export class BookController {
     @Body()
     bookData: UpdateBookDto,
   ) {
-    if (!bookData) {
-      throw new HttpException('empty data', HttpStatus.BAD_REQUEST);
-    }
+    if (!bookData) throw new BadRequestException('empty data');
+
     return this.bookService.update(BigInt(id), bookData);
   }
 

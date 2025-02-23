@@ -11,9 +11,9 @@ import { Public } from 'src/decorator/public-route.decorator';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  @Post()
   @Roles()
   @Public()
-  @Post()
   create(@Body() createAdminDto: CreateAdminDto) {
     return this.adminService.create(createAdminDto);
   }

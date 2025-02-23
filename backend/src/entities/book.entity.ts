@@ -47,7 +47,7 @@ export class Book extends AbstractEntity {
   description: string;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
-  coverImageFileURL: string;
+  coverImageFilename: string;
 
   @Column({ type: 'int', nullable: true })
   stock: number;
@@ -56,7 +56,7 @@ export class Book extends AbstractEntity {
   publishedDate: Date;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
-  contentFileURL: string;
+  contentFilename: string;
 
   @Column({ type: 'decimal', precision: 4, scale: 2, default: 1.0, nullable: true })
   version: number;
