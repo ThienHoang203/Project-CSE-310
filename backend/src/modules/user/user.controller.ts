@@ -24,6 +24,7 @@ import { plainToInstance } from 'class-transformer';
 import { UserInfoDto } from './dto/user-info.dto';
 import { Request } from 'express';
 import { ResponseMessage } from 'src/decorator/response-message.decorator';
+import { getIntValue } from 'src/utils/checkType';
 
 @Controller('user')
 export class UserController {
@@ -31,33 +32,36 @@ export class UserController {
 
   @Get('/limited')
   @Public()
-  findUser(@Query('currentPage') currentPage, @Query('pageSize') pageSize) {
-    const page = parseInt(currentPage, 10);
+  findUser(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
+    const parsedIntPage = getIntValue(currentPage);
 
-    const size = parseInt(pageSize, 10);
+    if (!parsedIntPage || parsedIntPage < 1)
+      throw new BadRequestException(`currentPage: ${currentPage} không phải số nguyên lớn hơn 0`);
 
-    if (isNaN(page) || page <= 0)
-      throw new BadRequestException('query param currentPage phải là số nguyên dương');
+    const parsedIntSize = getIntValue(pageSize);
 
-    if (isNaN(size) || size <= 0)
-      throw new BadRequestException('query param pageSize phải là số nguyên dương');
+    if (!parsedIntSize || parsedIntPage < 1)
+      throw new BadRequestException(`pageSize: ${pageSize} không phải số nguyên lớn hơn 0`);
 
-    return this.userService.findLimited(page, size);
+    return this.userService.findLimited(parsedIntPage, parsedIntSize);
   }
 
   @Get('/:id')
   async find(@Req() req: Request, @Param('id') id: string) {
-    const paramID = BigInt(id);
+    const parseIntID = getIntValue(id);
 
-    const payload: Express.User | undefined = req.user;
+    if (!parseIntID || parseIntID < 0)
+      throw new BadRequestException(`id: ${id} không phải là số nguyên dương!`);
+
+    const payload: Express.User | undefined = req?.user;
 
     if (!payload) throw new UnauthorizedException('Empty token!');
 
     const plainPayload = req.user as TokenPayloadType;
 
-    if (BigInt(plainPayload.userId) !== paramID) throw new ForbiddenException("userID doesn't match");
+    if (plainPayload.userId !== parseIntID) throw new ForbiddenException(`userID: ${id} doesn't match`);
 
-    const user = await this.userService.findById(paramID);
+    const user = await this.userService.findById(parseIntID);
 
     return plainToInstance(UserInfoDto, user);
   }
@@ -88,9 +92,12 @@ export class UserController {
     @Body()
     userData: UpdateUserDto,
   ) {
-    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
+    const parsedIntID = getIntValue(id);
 
-    const userID = BigInt(id);
+    if (!parsedIntID || parsedIntID < 0)
+      throw new BadRequestException(`id: ${id} không phải là số nguyên dương!`);
+
+    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
 
     const payload: Express.User | undefined = req.user;
 
@@ -98,9 +105,9 @@ export class UserController {
 
     const plainPayload = req.user as TokenPayloadType;
 
-    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
+    if (plainPayload.userId !== parsedIntID) throw new ForbiddenException("userID doesn't match");
 
-    return this.userService.update(userID, userData);
+    return this.userService.update(parsedIntID, userData);
   }
 
   @Patch('/change-password/:id')
@@ -111,9 +118,12 @@ export class UserController {
     @Body()
     userData: UpdatePasswordUserDto,
   ) {
-    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
+    const parsedIntID = getIntValue(id);
 
-    const userID = BigInt(id);
+    if (!parsedIntID || parsedIntID < 0)
+      throw new BadRequestException(`id: ${id} không phải là số nguyên dương!`);
+
+    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
 
     const payload: Express.User | undefined = req.user;
 
@@ -121,15 +131,18 @@ export class UserController {
 
     const plainPayload = req.user as TokenPayloadType;
 
-    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
+    if (plainPayload.userId !== parsedIntID) throw new ForbiddenException("userID doesn't match");
 
-    return this.userService.updatePassword(userID, userData.newPassword, userData.oldPassword);
+    return this.userService.updatePassword(parsedIntID, userData.newPassword, userData.oldPassword);
   }
 
   @Delete('/:id')
   @ResponseMessage('Xóa thành công.')
   delete(@Req() req: Request, @Param('id') id: string) {
-    const userId = BigInt(id);
+    const parsedIntID = getIntValue(id);
+
+    if (!parsedIntID || parsedIntID < 0)
+      throw new BadRequestException(`id: ${id} không phải là số nguyên dương!`);
 
     const payload: Express.User | undefined = req.user;
 
@@ -137,8 +150,8 @@ export class UserController {
 
     const plainPayload = req.user as TokenPayloadType;
 
-    if (BigInt(plainPayload.userId) !== userId) throw new ForbiddenException("userID doesn't match");
+    if (plainPayload.userId !== parsedIntID) throw new ForbiddenException("userID doesn't match");
 
-    return this.userService.delete(userId);
+    return this.userService.delete(parsedIntID);
   }
 }

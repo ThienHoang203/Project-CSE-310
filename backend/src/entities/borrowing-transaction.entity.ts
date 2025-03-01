@@ -13,11 +13,11 @@ export enum BorrowingTransactionStatus {
 
 @Entity()
 export class BorrowingTransaction extends AbstractEntityLight {
-  @Column({ type: 'bigint', nullable: false })
-  userId: bigint;
+  @Column({ type: 'int', nullable: false })
+  userId: number;
 
-  @Column({ type: 'bigint', nullable: false })
-  bookId: bigint;
+  @Column({ type: 'int', nullable: false })
+  bookId: number;
 
   @CreateDateColumn({ type: 'timestamp', nullable: false })
   borrowedAt: Date;

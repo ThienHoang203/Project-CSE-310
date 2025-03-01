@@ -6,11 +6,11 @@ import { Book } from './book.entity';
 @Check(`"rating" > 0 AND "rating" < 6`)
 @Entity()
 export class Rating extends AbstractEntity {
-  @Column({ type: 'bigint', nullable: false })
-  userId: bigint;
+  @Column({ type: 'int', nullable: false })
+  userId: number;
 
-  @Column({ type: 'bigint', nullable: false })
-  bookId: bigint;
+  @Column({ type: 'int', nullable: false })
+  bookId: number;
 
   @Column({ type: 'tinyint', nullable: false })
   rating: number;

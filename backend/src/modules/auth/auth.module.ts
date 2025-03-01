@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from 'src/passports/local.strategy';
@@ -14,6 +13,8 @@ import { RefreshTokenStrategy } from 'src/passports/refresh-token.strategy';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/guards/roles.guard';
+import { SessionSerializer } from 'src/passports/SessionSerializer';
+import ResetPassword from 'src/entities/reset-password.entity';
 
 @Module({
   controllers: [AuthController],
@@ -22,6 +23,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
     LocalStrategy,
     JwtStrategy,
     RefreshTokenStrategy,
+    SessionSerializer,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
@@ -34,7 +36,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
   imports: [
     UserModule,
     PassportModule,
-    TypeOrmModule.forFeature([RefeshToken]),
+    TypeOrmModule.forFeature([RefeshToken, ResetPassword]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({

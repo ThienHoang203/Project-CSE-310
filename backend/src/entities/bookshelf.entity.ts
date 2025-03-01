@@ -5,14 +5,11 @@ import { Book } from './book.entity';
 
 @Entity()
 export class Bookshelf extends AbstractEntityLight {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: bigint;
+  @Column({ type: 'int', nullable: false })
+  userId: number;
 
   @Column({ type: 'int', nullable: false })
-  userId: bigint;
-
-  @Column({ type: 'text', nullable: false })
-  bookId: bigint;
+  bookId: number;
 
   @JoinColumn()
   @ManyToOne(() => User, (user) => user.bookshelf)

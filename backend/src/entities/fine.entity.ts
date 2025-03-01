@@ -10,11 +10,11 @@ export enum FineStatus {
 
 @Entity()
 export class Fine extends AbstractEntity {
-  @Column({ type: 'bigint', nullable: false })
-  userId: bigint;
+  @Column({ type: 'int', nullable: false })
+  userId: number;
 
-  @Column({ type: 'bigint', nullable: false })
-  borrowingTransactionId: bigint;
+  @Column({ type: 'int', nullable: false })
+  borrowingTransactionId: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 3, nullable: true })
   amount: number;

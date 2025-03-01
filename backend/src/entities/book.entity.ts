@@ -40,14 +40,17 @@ export class Book extends AbstractEntity {
   @Column({ type: 'varchar', length: 50, nullable: false })
   author: string;
 
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  coverImageFilename: string;
+
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  contentFilename: string;
+
   @Column({ type: 'enum', enum: BookGerne, nullable: true })
   gerne: BookGerne;
 
   @Column({ type: 'text', nullable: true })
   description: string;
-
-  @Column({ type: 'varchar', length: 300, nullable: true })
-  coverImageFilename: string;
 
   @Column({ type: 'int', nullable: true })
   stock: number;
@@ -55,10 +58,7 @@ export class Book extends AbstractEntity {
   @Column({ type: 'date', nullable: true })
   publishedDate: Date;
 
-  @Column({ type: 'varchar', length: 300, nullable: true })
-  contentFilename: string;
-
-  @Column({ type: 'decimal', precision: 4, scale: 2, default: 1.0, nullable: true })
+  @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true })
   version: number;
 
   @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.book)

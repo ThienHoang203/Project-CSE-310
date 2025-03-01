@@ -1,14 +1,16 @@
 import { PickType } from '@nestjs/mapped-types';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsDecimal,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
+  Min,
 } from 'class-validator';
 import { Book, BookFormat, BookGerne, BookStatus } from 'src/entities/book.entity';
 
@@ -50,7 +52,9 @@ export default class CreateBookDto extends PickType(Book, [
   @IsNotEmpty({ message: 'format sách không được để trống' })
   format: BookFormat;
 
-  @IsNumber({}, { message: 'số lượng sách không đúng định dạng' })
+  @Min(0, { message: 'Số lượng sách không được bé hơn 0' })
+  @IsInt({ message: 'số lượng sách phải là số nguyên dương' })
+  @Type(() => Number)
   @IsOptional({ always: true })
   stock: number;
 
@@ -58,10 +62,7 @@ export default class CreateBookDto extends PickType(Book, [
   @IsOptional({ always: true })
   publishedDate: Date;
 
-  @IsDecimal({}, { message: 'phiên bản sách không đúng định dạng' })
+  @IsDecimal({ decimal_digits: '2,2' }, { message: 'phiên bản sách phải có định dạng DD.dd' })
   @IsOptional({ always: true })
   version: number;
-
-  // @IsOptional()
-  // ebookFile: File;
 }

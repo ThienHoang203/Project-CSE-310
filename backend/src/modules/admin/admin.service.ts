@@ -1,23 +1,20 @@
-import { ConflictException, HttpStatus, Injectable, InternalServerErrorException } from '@nestjs/common';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { UpdateAdminDto } from './dto/update-admin.dto';
+import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User, UserRole } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
-import { UserService } from '../user/user.service';
-import { hashPassword } from 'src/utils/hashing';
+import { hashString } from 'src/utils/hashing';
 import { MailerService } from '@nestjs-modules/mailer';
+import CreateUserDto from '../user/dto/create-user.dto';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly userService: UserService,
     private readonly mailerService: MailerService,
   ) {}
 
-  async create(userData: CreateAdminDto): Promise<{ message: string; userId: any; status: HttpStatus }> {
+  async create(userData: CreateUserDto): Promise<{ userId: any; username: string; email: string }> {
     let user: User | null = await this.userRepository.findOneBy([
       { email: userData.email ?? '' },
       { phoneNumber: userData.phoneNumber ?? '' },
@@ -34,10 +31,10 @@ export class AdminService {
     }
     //If those fields have not in any record, it will create a new user
     user = this.userRepository.create(userData);
-    user.password = await hashPassword(userData.password);
+    user.password = await hashString(userData.password);
     user.role = UserRole.ADMIN;
     const result = await this.userRepository.insert(user);
-    if (result.raw.affectedRows !== 1)
+    if (result.raw?.affectedRows !== 1)
       throw new InternalServerErrorException('server bị lỗi, vui lòng thử lại!');
     this.mailerService.sendMail({
       to: user.email,
@@ -48,9 +45,9 @@ export class AdminService {
       },
     });
     return {
-      message: 'Tạo tài khoản thành công.Bạn có thể kiểm tra email, xin cảm ơn!',
       userId: result.identifiers[0].id,
-      status: HttpStatus.CREATED,
+      username: userData.username,
+      email: userData.email,
     };
   }
 }

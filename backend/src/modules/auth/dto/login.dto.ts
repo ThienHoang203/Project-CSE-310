@@ -1,6 +1,4 @@
-import { PickType } from '@nestjs/mapped-types';
 import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
-import CreateUserDto from 'src/modules/user/dto/create-user.dto';
 
 export default class LoginDto {
   @MaxLength(50, { message: 'tên đăng nhập không được vượt quá 50 kí tự' })

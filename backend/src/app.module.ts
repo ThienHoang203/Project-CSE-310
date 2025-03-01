@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
@@ -22,10 +22,10 @@ import { FineModule } from './modules/fine/fine.module';
 import { RatingModule } from './modules/rating/rating.module';
 import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
 import { ReservationModule } from './modules/reservation/reservation.module';
-import { FilesModule } from './modules/files/files.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { Bookshelf } from './entities/bookshelf.entity';
-import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
+import { PassportModule } from '@nestjs/passport';
+import ResetPassword from './entities/reset-password.entity';
 
 @Module({
   imports: [
@@ -38,7 +38,17 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Book, RefeshToken, Rating, BorrowingTransaction, Fine, Reservation, Bookshelf],
+        entities: [
+          User,
+          Book,
+          RefeshToken,
+          Rating,
+          BorrowingTransaction,
+          Fine,
+          Reservation,
+          Bookshelf,
+          ResetPassword,
+        ],
         synchronize: true,
         logging: true,
       }),
@@ -72,6 +82,9 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PassportModule.register({
+      session: true,
+    }),
     UserModule,
     BookModule,
     AuthModule,
@@ -80,7 +93,6 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
     RatingModule,
     RefreshTokenModule,
     ReservationModule,
-    FilesModule,
     AdminModule,
   ],
   controllers: [AppController],
@@ -92,8 +104,4 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
     },
   ],
 })
-export class AppModule {
-  // configure(consumer: MiddlewareConsumer) {
-  //   consumer.apply(CheckFieldsExistMiddleware).forRoutes({ path: 'book', method: RequestMethod.POST });
-  // }
-}
+export class AppModule {}
