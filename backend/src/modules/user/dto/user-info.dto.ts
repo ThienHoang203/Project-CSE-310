@@ -5,7 +5,7 @@ import { User, UserMembershipLevel, UserRole, UserStatus } from 'src/entities/us
 @Exclude()
 export class UserInfoDto extends OmitType(User, ['password']) {
   @Expose()
-  id: bigint;
+  id: number;
 
   @Expose()
   name: string;

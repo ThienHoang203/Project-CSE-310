@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Strategy } from 'passport-local';
+import { User } from 'src/entities/user.entity';
 import { AuthService } from 'src/modules/auth/auth.service';
 import LoginDto from 'src/modules/auth/dto/login.dto';
 
@@ -16,7 +17,7 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
     });
   }
 
-  async validate(username: string, password: string) {
+  async validate(username: string, password: string): Promise<User> {
     //validate input from user
     const loginDto = plainToInstance(LoginDto, { username, password });
     const errors = await validate(loginDto);
@@ -31,9 +32,6 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
     }
     //validate user in database
     const user = await this.authService.validateUser(loginDto);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
     return user;
   }
 }

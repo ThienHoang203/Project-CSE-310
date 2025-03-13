@@ -1,5 +1,5 @@
 import { AbstractEntity } from 'src/entities/entity';
-import { Entity, Column, OneToMany, OneToOne } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BorrowingTransaction } from './borrowing-transaction.entity';
 import { Reservation } from './reservation.entity';
 import { Rating } from './rating.entity';
@@ -22,8 +22,6 @@ export enum BookFormat {
 export enum BookStatus {
   UNAVAIL = 'unavailable',
   AVAIL = 'available',
-  BOR = 'borrowed',
-  MIS = 'missing',
 }
 
 @Entity()
@@ -40,36 +38,51 @@ export class Book extends AbstractEntity {
   @Column({ type: 'varchar', length: 50, nullable: false })
   author: string;
 
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  coverImageFilename: string;
+
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  contentFilename: string;
+
   @Column({ type: 'enum', enum: BookGerne, nullable: true })
   gerne: BookGerne;
 
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'varchar', length: 300, nullable: true })
-  coverImageFilename: string;
-
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'int', nullable: false, default: 0 })
   stock: number;
+
+  @Column({ type: 'int', nullable: false, default: 0 })
+  waitingBorrowCount: number;
 
   @Column({ type: 'date', nullable: true })
   publishedDate: Date;
 
-  @Column({ type: 'varchar', length: 300, nullable: true })
-  contentFilename: string;
-
-  @Column({ type: 'decimal', precision: 4, scale: 2, default: 1.0, nullable: true })
+  @Column({ type: 'decimal', precision: 4, scale: 2, nullable: true })
   version: number;
 
-  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.book)
+  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.book, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   borrowingTransactions: BorrowingTransaction[];
 
-  @OneToOne(() => Rating, (rating) => rating.book)
+  @OneToMany(() => Rating, (rating) => rating.book, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   rating: Rating;
 
-  @OneToMany(() => Reservation, (reservation) => reservation.book)
+  @OneToMany(() => Reservation, (reservation) => reservation.book, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   reservations: Reservation[];
 
-  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.book)
+  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.book, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   bookshelf: Bookshelf[];
 }

@@ -1,7 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ConfigService } from '@nestjs/config';
 import { Public } from './decorator/public-route.decorator';
+import { log } from 'console';
+import { Request } from 'express';
 
 @Controller()
 export class AppController {
@@ -12,10 +14,8 @@ export class AppController {
 
   @Public()
   @Get()
-  getHello(): string {
-    console.log(this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRE_TIME'));
-    console.log(process.env.HASHING_PASSWORD_SALT);
-
+  getHello(@Req() req: Request): string {
+    log(req.cookies);
     return this.appService.getHello();
   }
 }

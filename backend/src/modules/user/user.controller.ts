@@ -3,142 +3,159 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Patch,
-  Post,
   Query,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import CreateUserDto from './dto/create-user.dto';
 import UpdateUserDto from './dto/update-user.dto';
-import { TokenPayloadType } from '../auth/auth.service';
 import { Public } from 'src/decorator/public-route.decorator';
 import { Roles } from 'src/decorator/roles.decorator';
 import { UserRole } from 'src/entities/user.entity';
 import UpdatePasswordUserDto from './dto/update-password-user.dto';
 import { plainToInstance } from 'class-transformer';
 import { UserInfoDto } from './dto/user-info.dto';
-import { Request } from 'express';
 import { ResponseMessage } from 'src/decorator/response-message.decorator';
+import { checkAndGetIntValue } from 'src/utils/checkType';
+import { Request } from 'express';
+import { NewTokenPayloadType, TokenPayloadType } from '../auth/auth.service';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('/limited')
-  @Public()
-  findUser(@Query('currentPage') currentPage, @Query('pageSize') pageSize) {
-    const page = parseInt(currentPage, 10);
+  // get the user information but hide the password
+  @Get('profile')
+  async findMyAccount(@Req() req: Request) {
+    if (!req.user || Object.keys(req.user).length === 0)
+      throw new BadRequestException('accessToken không có payload');
 
-    const size = parseInt(pageSize, 10);
+    const payload = req.user as TokenPayloadType | NewTokenPayloadType;
+    if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
 
-    if (isNaN(page) || page <= 0)
-      throw new BadRequestException('query param currentPage phải là số nguyên dương');
-
-    if (isNaN(size) || size <= 0)
-      throw new BadRequestException('query param pageSize phải là số nguyên dương');
-
-    return this.userService.findLimited(page, size);
-  }
-
-  @Get('/:id')
-  async find(@Req() req: Request, @Param('id') id: string) {
-    const paramID = BigInt(id);
-
-    const payload: Express.User | undefined = req.user;
-
-    if (!payload) throw new UnauthorizedException('Empty token!');
-
-    const plainPayload = req.user as TokenPayloadType;
-
-    if (BigInt(plainPayload.userId) !== paramID) throw new ForbiddenException("userID doesn't match");
-
-    const user = await this.userService.findById(paramID);
+    const user = await this.userService.findById(payload.userId);
 
     return plainToInstance(UserInfoDto, user);
   }
 
-  @Get()
-  @Roles(UserRole.ADMIN, UserRole.DEV)
-  getAllUsers() {
+  @Get('profile/:userId')
+  @Roles(UserRole.ADMIN)
+  async findOne(@Param('userId') userId: string) {
+    const parsedIntID = checkAndGetIntValue(
+      userId,
+      `userId: ${userId} phải là số nguyên`,
+      0,
+      `userId: ${userId} không được bé hơn 0`,
+    );
+
+    const user = await this.userService.findById(parsedIntID);
+
+    return plainToInstance(UserInfoDto, user);
+  }
+
+  // get all account
+  @Get('accounts')
+  @Roles(UserRole.ADMIN)
+  findAll() {
     return this.userService.findAll();
   }
 
-  @Post()
-  @ResponseMessage('Tạo tài khoản thành công.Bạn có thể kiểm tra email, xin cảm ơn!')
+  // get and split users by pages
+  @Get('accounts')
+  @Roles(UserRole.ADMIN)
   @Public()
-  create(
-    @Body()
-    userData: CreateUserDto,
-  ) {
-    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
+  findLimitedSize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
+    const parsedIntPage = checkAndGetIntValue(
+      currentPage,
+      `currentPage: ${currentPage} phải là số`,
+      1,
+      `currentPage(${currentPage}) phải lớn hơn 0`,
+    );
 
-    return this.userService.create(userData);
+    const parsedIntSize = checkAndGetIntValue(
+      pageSize,
+      `pageSize: ${pageSize} phải là số`,
+      1,
+      `pageSize(${pageSize}) phải lớn hơn 0`,
+    );
+
+    return this.userService.findLimited(parsedIntPage, parsedIntSize);
   }
 
-  @Patch('/:id')
+  // update user's information
+  @Patch()
   @ResponseMessage('Cập nhật thông tin người dùng thành công.')
-  update(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Body()
-    userData: UpdateUserDto,
-  ) {
-    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
+  updateMyInformation(@Req() req: Request, @Body() userData: UpdateUserDto) {
+    if (!req.user || Object.keys(req.user).length === 0)
+      throw new BadRequestException('accessToken không có payload');
 
-    const userID = BigInt(id);
+    const payload = req.user as TokenPayloadType | NewTokenPayloadType;
+    if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
 
-    const payload: Express.User | undefined = req.user;
+    if (!userData) throw new BadRequestException('empty data');
 
-    if (!payload) throw new UnauthorizedException('Empty token!');
-
-    const plainPayload = req.user as TokenPayloadType;
-
-    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
-
-    return this.userService.update(userID, userData);
+    return this.userService.update(payload.userId, userData);
   }
 
-  @Patch('/change-password/:id')
+  // change password of the user
+  @Patch('change-password')
   @ResponseMessage('Cập nhật mật khẩu thành công.')
-  updatePassword(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Body()
-    userData: UpdatePasswordUserDto,
-  ) {
-    if (!userData || Object.keys(userData).length === 0) throw new BadRequestException('empty data');
+  updateMyPassword(@Req() req: Request, @Body() userData: UpdatePasswordUserDto) {
+    if (!req.user || Object.keys(req.user).length === 0)
+      throw new BadRequestException('accessToken không có payload');
 
-    const userID = BigInt(id);
+    const payload = req.user as TokenPayloadType | NewTokenPayloadType;
+    if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
 
-    const payload: Express.User | undefined = req.user;
-
-    if (!payload) throw new UnauthorizedException('Empty token!');
-
-    const plainPayload = req.user as TokenPayloadType;
-
-    if (BigInt(plainPayload.userId) !== userID) throw new ForbiddenException("userID doesn't match");
-
-    return this.userService.updatePassword(userID, userData.newPassword, userData.oldPassword);
+    return this.userService.updatePassword(
+      payload.userId,
+      userData.newPassword,
+      userData.oldPassword,
+    );
   }
 
-  @Delete('/:id')
+  // users can disable their account, but cannot delete
+  @Patch('disable')
+  @ResponseMessage('This account was disabled.')
+  disableMyAccount(@Req() req: Request) {
+    if (!req.user || Object.keys(req.user).length === 0)
+      throw new BadRequestException('accessToken không có payload');
+
+    const payload = req.user as TokenPayloadType | NewTokenPayloadType;
+    if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
+
+    return this.userService.disableUser(payload.userId);
+  }
+
+  // force to disable a account
+  @Patch('disable/:userId')
+  @ResponseMessage('This account was disabled.')
+  @Roles(UserRole.ADMIN)
+  disableUser(@Param('userId') userId: string) {
+    const parsedIntID = checkAndGetIntValue(
+      userId,
+      `userId: ${userId} phải là số nguyên`,
+      0,
+      `userId: ${userId} không được bé hơn 0`,
+    );
+
+    return this.userService.disableUser(parsedIntID);
+  }
+
+  // delete a user
+  @Delete(':userId')
+  @Roles(UserRole.ADMIN)
   @ResponseMessage('Xóa thành công.')
-  delete(@Req() req: Request, @Param('id') id: string) {
-    const userId = BigInt(id);
+  deleteOne(@Param('userId') userId: string) {
+    const parsedIntID = checkAndGetIntValue(
+      userId,
+      `userId: ${userId} phải là số nguyên`,
+      0,
+      `userId: ${userId} không được bé hơn 0`,
+    );
 
-    const payload: Express.User | undefined = req.user;
-
-    if (!payload) throw new UnauthorizedException('Empty token!');
-
-    const plainPayload = req.user as TokenPayloadType;
-
-    if (BigInt(plainPayload.userId) !== userId) throw new ForbiddenException("userID doesn't match");
-
-    return this.userService.delete(userId);
+    return this.userService.delete(parsedIntID);
   }
 }

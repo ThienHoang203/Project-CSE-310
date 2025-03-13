@@ -1,10 +1,12 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
-import { AbstractEntityLight } from './entity-light.entity';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { User } from './user.entity';
 import { Book } from './book.entity';
 import { Fine } from './fine.entity';
+import { AbstractEntity } from './entity';
 
 export enum BorrowingTransactionStatus {
+  CANC = 'canceled',
+  WAIT = 'waiting',
   BOR = 'borrowing',
   RET = 'returned',
   OVER = 'overdue',
@@ -12,12 +14,12 @@ export enum BorrowingTransactionStatus {
 }
 
 @Entity()
-export class BorrowingTransaction extends AbstractEntityLight {
-  @Column({ type: 'bigint', nullable: false })
-  userId: bigint;
+export class BorrowingTransaction extends AbstractEntity {
+  @Column({ type: 'int', nullable: false })
+  userId: number;
 
-  @Column({ type: 'bigint', nullable: false })
-  bookId: bigint;
+  @Column({ type: 'int', nullable: false })
+  bookId: number;
 
   @CreateDateColumn({ type: 'timestamp', nullable: false })
   borrowedAt: Date;
@@ -28,7 +30,7 @@ export class BorrowingTransaction extends AbstractEntityLight {
   @Column({
     type: 'enum',
     enum: BorrowingTransactionStatus,
-    default: BorrowingTransactionStatus.BOR,
+    default: BorrowingTransactionStatus.WAIT,
     nullable: false,
   })
   status: BorrowingTransactionStatus;
@@ -37,13 +39,22 @@ export class BorrowingTransaction extends AbstractEntityLight {
   returnedAt: Date;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.borrowingTransactions)
+  @ManyToOne(() => User, (user) => user.borrowingTransactions, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   user: User;
 
   @JoinColumn()
-  @ManyToOne(() => Book, (book) => book.borrowingTransactions)
+  @ManyToOne(() => Book, (book) => book.borrowingTransactions, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   book: Book;
 
-  @OneToMany(() => Fine, (fine) => fine.borrowingTransaction)
-  fines: Fine[];
+  @OneToOne(() => Fine, (fine) => fine.borrowingTransaction, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
+  fine: Fine;
 }

@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
@@ -15,17 +15,21 @@ import { Fine } from './entities/fine.entity';
 import { Reservation } from './entities/reservation.entity';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { TransformInterceptor } from './interceptor/transform.interceptor';
 import { BorrowingTransactionModule } from './modules/borrowing-transaction/borrowing-transaction.module';
 import { FineModule } from './modules/fine/fine.module';
 import { RatingModule } from './modules/rating/rating.module';
-import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
 import { ReservationModule } from './modules/reservation/reservation.module';
-import { FilesModule } from './modules/files/files.module';
-import { AdminModule } from './modules/admin/admin.module';
 import { Bookshelf } from './entities/bookshelf.entity';
-import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
+import { PassportModule } from '@nestjs/passport';
+import ResetPassword from './entities/reset-password.entity';
+import { RolesGuard } from './guards/roles.guard';
+import { JwtStrategy } from './passports/jwt.strategy';
+import { JwtRefreshTokenStrategy } from './passports/jwt-refresh-token.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AccessTokenInterceptor } from './interceptor/access-token.interceptor';
+import { UserStatusInterceptor } from './interceptor/user-status.interceptor';
 
 @Module({
   imports: [
@@ -38,11 +42,22 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Book, RefeshToken, Rating, BorrowingTransaction, Fine, Reservation, Bookshelf],
+        entities: [
+          User,
+          Book,
+          RefeshToken,
+          Rating,
+          BorrowingTransaction,
+          Fine,
+          Reservation,
+          Bookshelf,
+          ResetPassword,
+        ],
         synchronize: true,
         logging: true,
       }),
     }),
+    // register for mailer module
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
@@ -69,8 +84,12 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
         },
       }),
     }),
+    //register configService into global
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    PassportModule.register({
+      session: true,
     }),
     UserModule,
     BookModule,
@@ -78,22 +97,33 @@ import { CheckFieldsExistMiddleware } from './middleware/book/checkFields';
     BorrowingTransactionModule,
     FineModule,
     RatingModule,
-    RefreshTokenModule,
     ReservationModule,
-    FilesModule,
-    AdminModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    JwtStrategy,
+    JwtRefreshTokenStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AccessTokenInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: UserStatusInterceptor,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
     },
   ],
 })
-export class AppModule {
-  // configure(consumer: MiddlewareConsumer) {
-  //   consumer.apply(CheckFieldsExistMiddleware).forRoutes({ path: 'book', method: RequestMethod.POST });
-  // }
-}
+export class AppModule {}
