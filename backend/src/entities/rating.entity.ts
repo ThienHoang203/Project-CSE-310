@@ -1,4 +1,4 @@
-import { Check, Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Check, Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from './entity';
 import { User } from './user.entity';
 import { Book } from './book.entity';
@@ -19,10 +19,10 @@ export class Rating extends AbstractEntity {
   comment: string;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.ratings)
+  @ManyToOne(() => User, (user) => user.ratings, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   user: User;
 
   @JoinColumn()
-  @OneToOne(() => Book, (book) => book.rating)
+  @ManyToOne(() => Book, (book) => book.rating, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   book: Book;
 }

@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { AbstractEntityLight } from './entity-light.entity';
 import { User } from './user.entity';
+import { PickType } from '@nestjs/mapped-types';
+import { AbstractEntity } from './entity';
 
 // export enum ResetPasswordStatus {
 //   NEW = 'new',
@@ -9,7 +10,7 @@ import { User } from './user.entity';
 // }
 
 @Entity()
-export default class ResetPassword extends AbstractEntityLight {
+export default class ResetPassword extends AbstractEntity {
   @Column({ type: 'int', nullable: false })
   userId: number;
 
@@ -23,6 +24,9 @@ export default class ResetPassword extends AbstractEntityLight {
   //   status: ResetPasswordStatus;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.resetPasswords)
+  @ManyToOne(() => User, (user) => user.resetPasswords, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   user: User;
 }

@@ -48,7 +48,7 @@ export default class CreateBookDto extends PickType(Book, [
   @IsOptional()
   status: BookStatus;
 
-  @IsEnum(BookFormat, { message: 'format sách không đúng định dạng' })
+  @IsEnum(BookFormat, { message: `Phải có định dạng ${Object.keys(BookFormat).join(' ,hoặc ')}` })
   @IsNotEmpty({ message: 'format sách không được để trống' })
   format: BookFormat;
 

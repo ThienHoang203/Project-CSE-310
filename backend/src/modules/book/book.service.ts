@@ -21,6 +21,12 @@ export class BookService {
     private readonly configService: ConfigService,
   ) {}
 
+  async hasBookId(bookId: number): Promise<true> {
+    const has = await this.bookRepository.existsBy({ id: bookId });
+    if (!has) throw new NotFoundException(`BookId: ${bookId} không tồn tại!`);
+    return true;
+  }
+
   async findById(id: number): Promise<Book> {
     const book: Book | null = await this.bookRepository.findOneBy({ id });
     if (!book) throw new NotFoundException(`BookId: ${id} doesn't exist!`);
@@ -28,8 +34,13 @@ export class BookService {
     return book;
   }
 
-  findAll(): Promise<Book[]> {
-    return this.bookRepository.find();
+  async findBookBySize(currentPage: number, size: number): Promise<Book[]> {
+    return this.bookRepository.find({ skip: (currentPage - 1) * size, take: size });
+  }
+
+  async findAll(): Promise<{ totalBooks: number; books: Book[] }> {
+    const [books, count] = await this.bookRepository.findAndCount();
+    return { totalBooks: count, books };
   }
 
   async create(
@@ -94,7 +105,9 @@ export class BookService {
     const attributeName = folderUploadConvertBookAttribute[`${category}`];
 
     if (!attributeName)
-      throw new BadRequestException(`Category phải là ${Object.values(UploadCategory).join(' ,hoặc ')}`);
+      throw new BadRequestException(
+        `Category phải là ${Object.values(UploadCategory).join(' ,hoặc ')}`,
+      );
 
     const result = this.bookRepository.update({ id }, { [`${attributeName}`]: filename });
 

@@ -45,7 +45,7 @@ export class User extends AbstractEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   name: string;
 
-  @Column({ type: 'varchar', length: 200, nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 200, nullable: false, unique: true })
   email: string;
 
   @Column({ type: 'date', nullable: true })
@@ -54,14 +54,17 @@ export class User extends AbstractEntity {
   @Column({ type: 'enum', enum: UserMembershipLevel, nullable: true })
   membershipLevel: UserMembershipLevel;
 
-  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.user)
-  borrowingTransactions: BorrowingTransaction[];
-
   @OneToMany(() => Fine, (fine) => fine.user)
   fines: Fine[];
 
   @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];
+
+  @OneToMany(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.user, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
+  borrowingTransactions: BorrowingTransaction[];
 
   @OneToMany(() => RefeshToken, (token) => token.user, {
     cascade: true,
@@ -69,12 +72,21 @@ export class User extends AbstractEntity {
   })
   refeshTokens: RefeshToken[];
 
-  @OneToMany(() => Reservation, (reservation) => reservation.user)
+  @OneToMany(() => Reservation, (reservation) => reservation.user, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   reservations: Reservation[];
 
-  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.user)
+  @OneToMany(() => Bookshelf, (bookshelf) => bookshelf.user, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   bookshelf: Bookshelf[];
 
-  @OneToMany(() => ResetPassword, (resetPassword) => resetPassword.user)
+  @OneToMany(() => ResetPassword, (resetPassword) => resetPassword.user, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   resetPasswords: ResetPassword[];
 }

@@ -1,10 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { AbstractEntityLight } from './entity-light.entity';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { User } from './user.entity';
 import { Book } from './book.entity';
+import { AbstractEntity } from './entity';
 
 @Entity()
-export class Bookshelf extends AbstractEntityLight {
+export class Bookshelf extends AbstractEntity {
   @Column({ type: 'int', nullable: false })
   userId: number;
 
@@ -12,10 +12,10 @@ export class Bookshelf extends AbstractEntityLight {
   bookId: number;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.bookshelf)
+  @ManyToOne(() => User, (user) => user.bookshelf, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   user: User;
 
   @JoinColumn()
-  @ManyToOne(() => Book, (book) => book.bookshelf)
+  @ManyToOne(() => Book, (book) => book.bookshelf, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   book: Book;
 }

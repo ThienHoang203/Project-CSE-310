@@ -8,55 +8,83 @@ import {
 } from '@nestjs/common';
 import { CreateBorrowingTransactionDto } from './dto/create-borrowing-transaction.dto';
 import { UpdateBorrowingTransactionDto } from './dto/update-borrowing-transaction.dto';
-import { Book, BookFormat } from 'src/entities/book.entity';
+import { Book, BookFormat, BookStatus } from 'src/entities/book.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from 'src/entities/user.entity';
-import { BorrowingTransaction } from 'src/entities/borrowing-transaction.entity';
+import { In, MoreThan, Not, Repository } from 'typeorm';
+import {
+  BorrowingTransaction,
+  BorrowingTransactionStatus,
+} from 'src/entities/borrowing-transaction.entity';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class BorrowingTransactionService {
   constructor(
     @InjectRepository(Book)
     private readonly bookRepository: Repository<Book>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<Book>,
+
+    private readonly userService: UserService,
     @InjectRepository(BorrowingTransaction)
     private readonly borrowingTransactionRepository: Repository<BorrowingTransaction>,
   ) {}
 
-  async create(
-    createBorrowingTransactionDto: CreateBorrowingTransactionDto,
-  ): Promise<{ id: any; message: string }> {
-    const { bookId, borrowedAt, dueDate, userId } = createBorrowingTransactionDto;
-
-    const isExisting = await this.userRepository.existsBy({ id: userId });
-    if (!isExisting) {
-      throw new BadRequestException({
-        message: `Không tồn tại userId: ${userId}`,
-        userId: userId,
-        statusCode: HttpStatus.BAD_REQUEST,
+  async isAllowedToBorrow(userId: number): Promise<true> {
+    const transaction = await this.borrowingTransactionRepository.findOne({
+      where: {
+        userId,
+        status: In([BorrowingTransactionStatus.OVER, BorrowingTransactionStatus.MIS]),
+      },
+      select: ['status'],
+    });
+    if (transaction)
+      throw new ForbiddenException({
+        message: `user(ID:${userId}) không được phép mượn thêm sách!`,
+        transactionStatus: transaction.status,
+        statusCode: HttpStatus.FORBIDDEN,
       });
-    }
+    return true;
+  }
+
+  async canCreateTransaction(userId: number, bookId: number): Promise<true> {
+    const transaction = await this.borrowingTransactionRepository.findOne({
+      where: {
+        userId,
+        bookId,
+        status: Not(In([BorrowingTransactionStatus.CANC, BorrowingTransactionStatus.RET])),
+      },
+      select: ['status'],
+    });
+    if (transaction)
+      throw new ForbiddenException({
+        message: `User(ID: ${userId}) đã tạo giao dịch mượn sách(ID: ${bookId}) này!`,
+        transactionStatus: transaction.status,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    return true;
+  }
+
+  async create(
+    userId: number,
+    createBorrowingTransactionDto: CreateBorrowingTransactionDto,
+  ): Promise<{ id: any }> {
+    const { bookId } = createBorrowingTransactionDto;
+
+    await this.userService.hasUserId(userId);
 
     const book = await this.bookRepository.findOneBy({ id: bookId });
     if (!book) {
-      throw new BadRequestException({
+      throw new NotFoundException({
         message: `Không tồn tại bookId: ${bookId}`,
         bookId: bookId,
-        statusCode: HttpStatus.BAD_REQUEST,
+        statusCode: HttpStatus.NOT_FOUND,
       });
     }
 
-    if (book.format !== BookFormat.PHYS) {
-      throw new BadRequestException({
-        message: 'Không có định dạng vật lí cho sách này!',
-        bookId: bookId,
-        statusCode: HttpStatus.BAD_REQUEST,
-      });
-    }
+    if (book.format !== BookFormat.PHYS)
+      throw new BadRequestException(`BookId: ${bookId} không phải sách in!`);
 
-    if (book.stock < 1) {
+    //check if this book's stock is lower than 1, this request have to cancel!
+    if (book.stock < 1 || book.stock <= book.waitingBorrowCount) {
       throw new BadRequestException({
         message: 'Số lượng sách không đủ',
         bookId: bookId,
@@ -64,28 +92,46 @@ export class BorrowingTransactionService {
       });
     }
 
-    const res = await this.bookRepository.update({ id: book.id }, { stock: book.stock - 1 });
+    //if the user has any book overdue or missing, the user can not borrow any book at all
+    await this.isAllowedToBorrow(userId);
 
-    if (res.affected === undefined)
-      throw new InternalServerErrorException('Server bị lỗi, vui lòng thử lại!');
+    await this.canCreateTransaction(userId, bookId);
 
-    if (res.affected === 0) throw new ForbiddenException('tạo mới không thành công');
+    const resultIncreaseWaiting = await this.bookRepository.update(
+      { id: book.id },
+      { waitingBorrowCount: book.waitingBorrowCount + 1 },
+    );
 
-    const result = await this.borrowingTransactionRepository.insert(createBorrowingTransactionDto);
+    if (!resultIncreaseWaiting?.affected || resultIncreaseWaiting.affected === 0)
+      throw new InternalServerErrorException(
+        `Cập nhật borrowingWaitingCount của bookId: ${book.id} thất bại!`,
+      );
 
-    if (result.identifiers.length !== 1)
-      throw new InternalServerErrorException('Server bị lỗi, vui lòng thử lại!');
+    const result = await this.borrowingTransactionRepository.insert({
+      ...createBorrowingTransactionDto,
+      userId: userId,
+    });
 
-    return { id: result.identifiers[0], message: 'Tạo thành công' };
+    if (result.identifiers.length < 1)
+      throw new InternalServerErrorException('Tạo giao dịch mới thất bại!');
+
+    return { id: result.identifiers[0].id };
   }
 
-  async findAll(): Promise<BorrowingTransaction[]> {
-    const result = await this.borrowingTransactionRepository.find();
+  async findAll(): Promise<{ totalTransactions: number; transactions: BorrowingTransaction[] }> {
+    const [transactions, count] = await this.borrowingTransactionRepository.findAndCount();
 
-    if (!result || result.length === 0)
-      throw new NotFoundException('Không tìm thấy bất kỳ borrowing transaction!');
+    return { totalTransactions: count, transactions: transactions };
+  }
 
-    return result;
+  async findAllByUserId(
+    userId: number,
+  ): Promise<{ totalTransactions: number; transactions: BorrowingTransaction[] }> {
+    const [transactions, count] = await this.borrowingTransactionRepository.findAndCountBy({
+      userId,
+    });
+
+    return { totalTransactions: count, transactions: transactions };
   }
 
   async findById(id: number): Promise<BorrowingTransaction> {
@@ -96,37 +142,166 @@ export class BorrowingTransactionService {
     return result;
   }
 
-  async update(
-    id: number,
-    updateBorrowingTransactionDto: UpdateBorrowingTransactionDto,
-  ): Promise<{ message: string; id: number }> {
-    const result = await this.borrowingTransactionRepository.update(
-      { id: id },
-      updateBorrowingTransactionDto,
-    );
-    if (result.affected === undefined)
-      throw new InternalServerErrorException('Server bị lỗi, vui lòng thử lại!');
+  async findOneForTheUser(userId: number, transactionId: number): Promise<BorrowingTransaction> {
+    const transaction = await this.borrowingTransactionRepository.findOneBy({
+      id: transactionId,
+      userId,
+    });
 
-    if (result.affected < 0) throw new NotFoundException(`Không tìm thấy borrowing transaction có id: ${id}`);
+    if (!transaction)
+      throw new NotFoundException(
+        `There's no transaction with transactionId: ${transactionId} and userId: ${userId}!`,
+      );
+
+    return transaction;
+  }
+
+  async cancelOneForTheUser(
+    userId: number,
+    transactionId: number,
+  ): Promise<{ transactionId: number }> {
+    const transaction = await this.borrowingTransactionRepository.findOne({
+      where: { id: transactionId, userId },
+      select: ['status'],
+    });
+
+    if (!transaction)
+      throw new NotFoundException(
+        `There's no transaction with transactionId: ${transactionId} and userId: ${userId}!`,
+      );
+
+    if (transaction.status !== BorrowingTransactionStatus.WAIT)
+      throw new ForbiddenException({
+        message: `transaction(ID: ${transactionId}) is not allowed to change`,
+        transactionStatus: transaction.status,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+
+    const result = await this.borrowingTransactionRepository.update(
+      { id: transactionId },
+      { status: BorrowingTransactionStatus.CANC },
+    );
+
+    if (!result?.affected || result.affected === 0)
+      throw new InternalServerErrorException(`Hủy transaction(ID: ${transactionId}) thất bại`);
+
+    return { transactionId };
+  }
+
+  async acceptOneTransaction(transactionId: number): Promise<{ transactionId: number }> {
+    const transaction = await this.borrowingTransactionRepository.findOne({
+      where: { id: transactionId },
+      select: ['status', 'bookId'],
+    });
+
+    if (!transaction)
+      throw new NotFoundException(`Không tìm thấy transaction(ID: ${transactionId}) này!`);
+
+    const { status, bookId } = transaction;
+
+    if (status !== BorrowingTransactionStatus.WAIT)
+      throw new ForbiddenException(`Không được phép thay đổi transaction(${transactionId}) này!`);
+
+    const book = await this.bookRepository.findOne({
+      where: { id: bookId },
+      select: ['stock', 'waitingBorrowCount'],
+    });
+
+    if (!book) throw new NotFoundException(`Không tìm thấy book(ID: ${bookId}) này!`);
+
+    const { stock, waitingBorrowCount } = book;
+
+    if (stock < 1 || waitingBorrowCount < 1)
+      throw new BadRequestException({
+        message: `transaction(ID: ${transactionId}) không được chấp nhận`,
+        book: { id: bookId, stock, waitingBorrowCount },
+        statusCode: HttpStatus.BAD_REQUEST,
+      });
+
+    const updateBookResult = await this.bookRepository.update(
+      { id: bookId },
+      {
+        stock: stock - 1,
+        waitingBorrowCount: waitingBorrowCount - 1,
+        status: stock > 1 ? BookStatus.UNAVAIL : BookStatus.AVAIL,
+      },
+    );
+
+    if (!updateBookResult?.affected || updateBookResult.affected === 0)
+      throw new InternalServerErrorException(
+        `transaction(ID: ${transactionId}) chấp nhận thất bại!`,
+      );
+
+    const acceptResult = await this.borrowingTransactionRepository.update(
+      { id: transactionId },
+      { status: BorrowingTransactionStatus.BOR },
+    );
+
+    if (!acceptResult?.affected || acceptResult.affected === 0)
+      throw new InternalServerErrorException(
+        `transaction(ID: ${transactionId}) chấp nhận thất bại!`,
+      );
+
+    return { transactionId };
+  }
+
+  async update(
+    transactionId: number,
+    updateData: UpdateBorrowingTransactionDto,
+  ): Promise<{ transactionId: number }> {
+    const hasTransaction = await this.borrowingTransactionRepository.existsBy({
+      id: transactionId,
+    });
+
+    if (!hasTransaction)
+      throw new NotFoundException(`Không tìm thấy transaction(Id: ${transactionId}) này!`);
+
+    const result = await this.borrowingTransactionRepository.update(
+      { id: transactionId },
+      updateData,
+    );
+
+    if (!result?.affected || result.affected === 0)
+      throw new InternalServerErrorException(
+        `Cập nhật transaction(ID: ${transactionId}) thất bại!`,
+      );
 
     return {
-      id: id,
-      message: 'Cập nhật thành công!',
+      transactionId,
     };
   }
 
-  async remove(id: number): Promise<{ message: string; id: number }> {
-    const result = await this.borrowingTransactionRepository.delete({ id: id });
+  async remove(transactionId: number): Promise<{ transactionId: number }> {
+    const transaction = await this.findById(transactionId);
 
-    if (result.affected === undefined)
-      throw new InternalServerErrorException('Server bị lỗi, vui lòng thử lại!');
+    if (!transaction)
+      throw new NotFoundException(`Không tìm thấy transaction(Id: ${transactionId}) này!`);
 
-    if (result.affected === null || result.affected === 0)
-      throw new NotFoundException(`Không tìm thấy borrowing transaction có id: ${id}`);
+    if (
+      transaction.status === BorrowingTransactionStatus.BOR ||
+      transaction.status === BorrowingTransactionStatus.MIS ||
+      transaction.status === BorrowingTransactionStatus.OVER
+    ) {
+      throw new ForbiddenException({
+        message: `Không thể xóa transaction(ID: ${transactionId})`,
+        transactionStatus: transaction.status,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (transaction.status === BorrowingTransactionStatus.WAIT)
+      this.bookRepository.decrement(
+        { id: transaction.bookId, waitingBorrowCount: MoreThan(0) },
+        'waitingBorrowCount',
+        1,
+      );
+    const result = await this.borrowingTransactionRepository.delete({ id: transactionId });
+
+    if (!result?.affected || result.affected === 0)
+      throw new InternalServerErrorException(`Xóa transaction có id: ${transactionId} thất bại`);
 
     return {
-      message: 'Xóa thành công!',
-      id: id,
+      transactionId,
     };
   }
 }

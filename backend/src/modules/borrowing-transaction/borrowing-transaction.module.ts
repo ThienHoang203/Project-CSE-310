@@ -10,6 +10,6 @@ import { BorrowingTransaction } from 'src/entities/borrowing-transaction.entity'
   controllers: [BorrowingTransactionController],
   providers: [BorrowingTransactionService],
   imports: [UserModule, BookModule, TypeOrmModule.forFeature([BorrowingTransaction])],
-  exports: [BorrowingTransactionModule, TypeOrmModule],
+  exports: [BorrowingTransactionService, TypeOrmModule],
 })
 export class BorrowingTransactionModule {}

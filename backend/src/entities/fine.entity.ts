@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from './entity';
 import { User } from './user.entity';
 import { BorrowingTransaction } from './borrowing-transaction.entity';
@@ -23,10 +23,13 @@ export class Fine extends AbstractEntity {
   status: FineStatus;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.fines)
+  @ManyToOne(() => User, (user) => user.fines, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   user: User;
 
   @JoinColumn()
-  @ManyToOne(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.fines)
+  @ManyToOne(() => BorrowingTransaction, (borrowingTransaction) => borrowingTransaction.fine, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   borrowingTransaction: BorrowingTransaction;
 }

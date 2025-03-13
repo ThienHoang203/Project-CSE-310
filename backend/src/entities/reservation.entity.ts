@@ -6,7 +6,8 @@ import { Book } from './book.entity';
 export enum ReservationStatus {
   WAI = 'waiting',
   SUC = 'successful',
-  CAN = 'cancel',
+  CANC = 'canceled',
+  DONE = 'done',
 }
 
 @Entity()
@@ -17,14 +18,19 @@ export class Reservation extends AbstractEntity {
   @Column({ type: 'int', nullable: false })
   bookId: number;
 
-  @Column({ type: 'enum', enum: ReservationStatus, default: ReservationStatus.WAI, nullable: false })
+  @Column({
+    type: 'enum',
+    enum: ReservationStatus,
+    default: ReservationStatus.WAI,
+    nullable: false,
+  })
   status: ReservationStatus;
 
   @JoinColumn()
-  @ManyToOne(() => User, (user) => user.reservations)
+  @ManyToOne(() => User, (user) => user.reservations, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   user: User;
 
   @JoinColumn()
-  @ManyToOne(() => Book, (book) => book.reservations)
+  @ManyToOne(() => Book, (book) => book.reservations, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   book: Book;
 }

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UploadedFiles,
   UseInterceptors,
@@ -27,7 +28,7 @@ import { memoryStorage } from 'multer';
 import { createFolderIfAbsent, saveFile } from 'src/utils/file';
 import { BookFormat } from 'src/entities/book.entity';
 import { Public } from 'src/decorator/public-route.decorator';
-import { getIntValue } from 'src/utils/checkType';
+import { checkAndGetIntValue } from 'src/utils/checkType';
 
 type FileNameObjectType = {
   ebookFilename: string;
@@ -42,46 +43,10 @@ export class BookController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Get()
-  @Roles()
-  @Public()
-  getAllBook() {
-    return this.bookService.findAll();
-  }
+  //---------------------------ADMIN ROUTES---------------------------
 
-  @Get('/:id')
-  @Roles()
-  @Public()
-  getBookById(@Param('id') id: string) {
-    const parsedIntID = getIntValue(id);
-
-    if (!parsedIntID || parsedIntID < 0) throw new BadRequestException(`id: ${id} phải là số nguyên dương!`);
-
-    return this.bookService.findById(parsedIntID);
-  }
-
-  @Get('/view/:filename')
-  @Roles()
-  @Public()
-  async downloadEbookFile(@Param('filename') filename: string, @Res() res: Response) {
-    let folder = '';
-
-    const parsedFile = parse(filename);
-
-    if (ebookExtType.includes(parsedFile.ext)) {
-      folder = this.configService.get<string>('EBOOK_FOLDER') || '';
-    } else {
-      folder = this.configService.get<string>('COVER_IMAGES_FOLDER') || '';
-    }
-
-    const filePath = join(process.cwd(), folder, filename);
-
-    if (!fs.existsSync(filePath)) throw new NotFoundException(`Can not found file name ${filename}`);
-
-    return res.sendFile(filePath);
-  }
-
-  @Post()
+  //create a new book
+  @Post('/admin')
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -131,7 +96,8 @@ export class BookController {
 
     //create save cover image file and create cover image file name
     if (coverImageFile && coverImageFile.length > 0) {
-      const uploadFolder = this.configService.get<string>('COVER_IMAGES_FOLDER') ?? 'uploads/covers';
+      const uploadFolder =
+        this.configService.get<string>('COVER_IMAGES_FOLDER') ?? 'uploads/covers';
       createFolderIfAbsent(uploadFolder);
 
       coverImageFilename = saveFile(coverImageFile[0], uploadFolder);
@@ -145,45 +111,8 @@ export class BookController {
     });
   }
 
-  // @Patch()
-  // @UseInterceptors(
-  //   FileFieldsInterceptor(
-  //     [
-  //       { name: 'ebookFile', maxCount: 1 },
-  //       { name: 'coverImageFile', maxCount: 1 },
-  //     ],
-  //     {
-  //       storage: memoryStorage(),
-  //       fileFilter: fileFilter,
-  //       limits: {
-  //         fields: 11,
-  //         files: 2,
-  //         fileSize: 60 * 1024 * 1024,
-  //       },
-  //     },
-  //   ),
-  // )
-  // updateFile(
-  //   @UploadedFiles()
-  //   {
-  //     ebookFile,
-  //     coverImageFile,
-  //   }: { ebookFile?: Express.Multer.File[]; coverImageFile?: Express.Multer.File[] },
-  //   @Query('id') id: string,
-  //   @Query('category') category: string,
-  // ) {
-  //   const parsedIntID = getIntValue(id);
-
-  //   if (!parsedIntID || parsedIntID < 0) throw new BadRequestException(`id: ${id} phải là số nguyên dương!`);
-
-  //   if (!category) throw new BadRequestException('Tham số thiếu category!');
-
-  //   const uploadFoldername = this.configService.get<string>('UPLOAD_FOLDER') || 'uploads';
-
-  //   return this.bookService.updateFile(parsedIntID, category);
-  // }
-
-  @Patch('/:id')
+  //update a book
+  @Patch('admin/:bookId')
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -206,27 +135,104 @@ export class BookController {
     fileFields: { ebookFile?: Express.Multer.File[]; coverImageFile?: Express.Multer.File[] },
     @Body()
     bookData: UpdateBookDto,
-    @Param('id') id: string,
+    @Param('bookId') bookId: string,
   ) {
-    const parsedIntID = getIntValue(id);
-
-    console.log('coverImageFile:::', parsedIntID);
-
-    if (!parsedIntID || parsedIntID < 0) throw new BadRequestException(`id: ${id} phải là số nguyên dương!`);
-    console.log('bookdata: ', bookData);
+    const parsedIntID = checkAndGetIntValue(
+      bookId,
+      `bookId: ${bookId} phải là số nguyên`,
+      0,
+      `id(${bookId}) phải lớn hơn hoặc bằng 0`,
+    );
 
     if (!bookData && !fileFields?.coverImageFile && !fileFields?.ebookFile)
       throw new BadRequestException('empty data');
 
-    return this.bookService.update(parsedIntID, bookData, fileFields?.ebookFile, fileFields?.coverImageFile);
+    return this.bookService.update(
+      parsedIntID,
+      bookData,
+      fileFields?.ebookFile,
+      fileFields?.coverImageFile,
+    );
   }
 
-  @Delete('/:id')
-  delete(@Param('id') id: string) {
-    const parsedIntID = getIntValue(id);
-
-    if (!parsedIntID || parsedIntID < 0) throw new BadRequestException(`id: ${id} phải là số nguyên dương!`);
+  //delete a book
+  @Delete('admin/:bookId')
+  delete(@Param('bookId') bookId: string) {
+    const parsedIntID = checkAndGetIntValue(
+      bookId,
+      `id: ${bookId} phải là số`,
+      0,
+      `id(${bookId}) phải lớn hơn hoặc bằng 0`,
+    );
 
     return this.bookService.delete(parsedIntID);
+  }
+
+  //---------------------------NORMAL USER ROUTES----------------------
+
+  //get all books
+  @Get()
+  @Roles()
+  @Public()
+  getAllBook() {
+    return this.bookService.findAll();
+  }
+
+  // view a file
+  @Get('view/:filename')
+  @Roles()
+  async downloadEbookFile(@Param('filename') filename: string, @Res() res: Response) {
+    let folder = '';
+
+    const parsedFile = parse(filename);
+
+    if (ebookExtType.includes(parsedFile.ext)) {
+      folder = this.configService.get<string>('EBOOK_FOLDER') || '';
+    } else {
+      folder = this.configService.get<string>('COVER_IMAGES_FOLDER') || '';
+    }
+
+    const filePath = join(process.cwd(), folder, filename);
+
+    if (!fs.existsSync(filePath))
+      throw new NotFoundException(`Can not found file name ${filename}`);
+
+    return res.sendFile(filePath);
+  }
+
+  // get a book
+  @Get(':bookId')
+  @Roles()
+  @Public()
+  getBookById(@Param('bookId') bookId: string) {
+    console.log('Hello');
+    const parsedIntID = checkAndGetIntValue(
+      bookId,
+      `bookId: ${bookId} phải là số`,
+      0,
+      `bookId(${bookId}) phải lớn hơn hoặc bằng 0`,
+    );
+
+    return this.bookService.findById(parsedIntID);
+  }
+
+  @Get('paginate')
+  @Roles()
+  @Public()
+  paginateBySize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
+    const parsedIntCurrentPage = checkAndGetIntValue(
+      currentPage,
+      'currentPage phải là số nguyên!',
+      1,
+      'currentPage phải lớn hơn 0!',
+    );
+    const parsedIntPageSize = checkAndGetIntValue(
+      currentPage,
+      'currentPage phải là số nguyên!',
+      1,
+      'currentPage phải lớn hơn 0!',
+    );
+
+    return this.bookService.findBookBySize(parsedIntCurrentPage, parsedIntPageSize);
   }
 }
