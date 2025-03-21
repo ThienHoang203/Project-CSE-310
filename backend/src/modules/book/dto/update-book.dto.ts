@@ -7,7 +7,6 @@ export default class UpdateBookDto extends PickType(CreateBookDto, [
   'description',
   'gerne',
   'publishedDate',
-  'status',
   'stock',
   'title',
   'version',

@@ -39,7 +39,7 @@ export class ReservationService {
     const hasBeenReserved = await this.reservationRepository.existsBy({
       userId,
       bookId,
-      status: Not(In([ReservationStatus.CANC, ReservationStatus.DONE])),
+      status: Not(In([ReservationStatus.CANC])),
     });
 
     if (hasBeenReserved)
@@ -78,7 +78,7 @@ export class ReservationService {
     return { totalReservations: total, reservations: reservations };
   }
 
-as
+  as;
 
   async findOneById(id: number): Promise<Reservation> {
     const reservation = await this.reservationRepository.findOneBy({ id });

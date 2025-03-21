@@ -87,16 +87,16 @@ export class ReservationController {
 
   @Patch('cancel')
   @ResponseMessage('Hủy đặt trước thành công.')
- async cancel(@Req() req: Request, @Body() body: UpdateReservationDto) {
+  async cancel(@Req() req: Request, @Body() body: UpdateReservationDto) {
     if (!req.user || Object.keys(req.user).length === 0)
       throw new BadRequestException('accessToken không có payload');
 
     const payload = req.user as TokenPayloadType | NewTokenPayloadType;
     if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
 
-  const reservation = await this.reservationService.findOneById(body.id);
+    const reservation = await this.reservationService.findOneById(body.id);
 
-if (reservation.status === ReservationStatus.DONE) throw new ForbiddenException();
+    if (reservation.status === ReservationStatus.SUC) throw new ForbiddenException();
 
     return this.reservationService.update(body.id, payload.userId, ReservationStatus.CANC);
   }

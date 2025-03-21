@@ -15,9 +15,9 @@ export enum UserRole {
 }
 
 export enum UserMembershipLevel {
-  BZ = 'đồng',
-  SL = 'bạc',
-  GD = 'vàng',
+  BZ = 'bronze',
+  SL = 'silver',
+  GD = 'gold',
 }
 
 export enum UserStatus {
