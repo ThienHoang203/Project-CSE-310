@@ -6,9 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  UseInterceptors,
   BadRequestException,
-  ConflictException,
   Req,
 } from '@nestjs/common';
 import { BorrowingTransactionService } from './borrowing-transaction.service';
@@ -19,7 +17,6 @@ import { UserRole } from 'src/entities/user.entity';
 import { Roles } from 'src/decorator/roles.decorator';
 import { ResponseMessage } from 'src/decorator/response-message.decorator';
 import { BorrowingTransactionStatus } from 'src/entities/borrowing-transaction.entity';
-import { UserStatusInterceptor } from 'src/interceptor/user-status.interceptor';
 import { Request } from 'express';
 import { NewTokenPayloadType, TokenPayloadType } from '../auth/auth.service';
 
@@ -30,7 +27,7 @@ export class BorrowingTransactionController {
   // ---------------------ADMIN ROUTES-----------------------------
 
   //get all transaction
-  @Get('admin')
+  @Get('view')
   @Roles(UserRole.ADMIN)
   findAll() {
     return this.borrowingTransactionService.findAll();

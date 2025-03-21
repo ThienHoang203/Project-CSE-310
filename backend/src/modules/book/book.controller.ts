@@ -46,7 +46,7 @@ export class BookController {
   //---------------------------ADMIN ROUTES---------------------------
 
   //create a new book
-  @Post('/admin')
+  @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -112,7 +112,7 @@ export class BookController {
   }
 
   //update a book
-  @Patch('admin/:bookId')
+  @Patch('/:bookId')
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -156,7 +156,7 @@ export class BookController {
   }
 
   //delete a book
-  @Delete('admin/:bookId')
+  @Delete('/:bookId')
   delete(@Param('bookId') bookId: string) {
     const parsedIntID = checkAndGetIntValue(
       bookId,
@@ -169,14 +169,6 @@ export class BookController {
   }
 
   //---------------------------NORMAL USER ROUTES----------------------
-
-  //get all books
-  @Get()
-  @Roles()
-  @Public()
-  getAllBook() {
-    return this.bookService.findAll();
-  }
 
   // view a file
   @Get('view/:filename')
@@ -194,29 +186,12 @@ export class BookController {
 
     const filePath = join(process.cwd(), folder, filename);
 
-    if (!fs.existsSync(filePath))
-      throw new NotFoundException(`Can not found file name ${filename}`);
+    if (!fs.existsSync(filePath)) throw new NotFoundException(`Not found file name ${filename}`);
 
     return res.sendFile(filePath);
   }
 
-  // get a book
-  @Get(':bookId')
-  @Roles()
-  @Public()
-  getBookById(@Param('bookId') bookId: string) {
-    console.log('Hello');
-    const parsedIntID = checkAndGetIntValue(
-      bookId,
-      `bookId: ${bookId} phải là số`,
-      0,
-      `bookId(${bookId}) phải lớn hơn hoặc bằng 0`,
-    );
-
-    return this.bookService.findById(parsedIntID);
-  }
-
-  @Get('paginate')
+  @Get('/pagination')
   @Roles()
   @Public()
   paginateBySize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
@@ -234,5 +209,29 @@ export class BookController {
     );
 
     return this.bookService.findBookBySize(parsedIntCurrentPage, parsedIntPageSize);
+  }
+
+  //get all books
+  @Get()
+  @Roles()
+  @Public()
+  getAllBook() {
+    return this.bookService.findAll();
+  }
+
+  // get a book
+  @Get('/:bookId')
+  @Roles()
+  @Public()
+  getBookById(@Param('bookId') bookId: string) {
+    console.log('Hello');
+    const parsedIntID = checkAndGetIntValue(
+      bookId,
+      `bookId: ${bookId} phải là số`,
+      0,
+      `bookId(${bookId}) phải lớn hơn hoặc bằng 0`,
+    );
+
+    return this.bookService.findById(parsedIntID);
   }
 }
