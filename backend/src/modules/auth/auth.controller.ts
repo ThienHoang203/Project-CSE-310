@@ -55,6 +55,7 @@ export class AuthController {
   @Public()
   @ResponseMessage('Tạo tài khoản admin thành công, chờ ADMIN active tài khoản!')
   async signUpAdmin(@Body() signupData: CreateUserDto) {
+    console.log({ signupData });
     return this.authService.signupAdmin(signupData);
   }
 
@@ -81,14 +82,14 @@ export class AuthController {
     return { ...this.jwtService.decode(authorization.split(' ')[1]) };
   }
 
-  @Get('session')
-  @Public()
-  async getSession(@Session() session: Record<string, any>) {
-    console.log(session);
-    console.log(session.id);
-    session.authenticated = true;
-    return session;
-  }
+  // @Get('session')
+  // @Public()
+  // async getSession(@Session() session: Record<string, any>) {
+  //   console.log(session);
+  //   console.log(session.id);
+  //   session.authenticated = true;
+  //   return session;
+  // }
 
   @Post('forgot-password')
   @Public()

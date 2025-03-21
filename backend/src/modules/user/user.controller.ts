@@ -63,9 +63,8 @@ export class UserController {
   }
 
   // get and split users by pages
-  @Get('accounts')
+  @Get('accounts/pagination')
   @Roles(UserRole.ADMIN)
-  @Public()
   findLimitedSize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
     const parsedIntPage = checkAndGetIntValue(
       currentPage,

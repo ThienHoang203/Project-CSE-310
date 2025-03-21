@@ -52,13 +52,17 @@ export class UserService {
     return user;
   }
 
-  async findLimited(currentPage: number, pageSize: number): Promise<User[]> {
+  async findLimited(
+    currentPage: number,
+    pageSize: number,
+  ): Promise<{ totalUsers: number; users: User[] }> {
     const users = await this.userRepository.find({
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
+      select: formattedUserRespsonse,
     });
 
-    return users;
+    return { totalUsers: users.length, users };
   }
 
   async findAll(): Promise<{ totalUsers: number; users: User[] }> {

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Book, BookFormat, BookStatus } from 'src/entities/book.entity';
+import { Book, BookFormat } from 'src/entities/book.entity';
 import { Repository } from 'typeorm';
 import UpdateBookDto from './dto/update-book.dto';
 import CreateBookDto from './dto/create-book.dto';
@@ -50,10 +50,6 @@ export class BookService {
 
     if (book.contentFilename && book.format === BookFormat.DIG) {
       book.stock = 1;
-    }
-
-    if (book.stock > 0) {
-      book.status = BookStatus.AVAIL;
     }
 
     return this.bookRepository.save(book);

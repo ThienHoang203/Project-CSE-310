@@ -19,18 +19,10 @@ export enum BookFormat {
   DIG = 'bản điện tử',
 }
 
-export enum BookStatus {
-  UNAVAIL = 'unavailable',
-  AVAIL = 'available',
-}
-
 @Entity()
 export class Book extends AbstractEntity {
   @Column({ type: 'varchar', length: 200, nullable: false })
   title: string;
-
-  @Column({ type: 'enum', enum: BookStatus, default: BookStatus.UNAVAIL, nullable: false })
-  status: BookStatus;
 
   @Column({ type: 'enum', enum: BookFormat, nullable: false })
   format: BookFormat;

@@ -7,7 +7,6 @@ export enum ReservationStatus {
   WAI = 'waiting',
   SUC = 'successful',
   CANC = 'canceled',
-  DONE = 'done',
 }
 
 @Entity()

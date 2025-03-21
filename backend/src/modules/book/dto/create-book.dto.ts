@@ -6,13 +6,12 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   Min,
 } from 'class-validator';
-import { Book, BookFormat, BookGerne, BookStatus } from 'src/entities/book.entity';
+import { Book, BookFormat, BookGerne } from 'src/entities/book.entity';
 
 export default class CreateBookDto extends PickType(Book, [
   'author',
@@ -20,7 +19,6 @@ export default class CreateBookDto extends PickType(Book, [
   'format',
   'gerne',
   'publishedDate',
-  'status',
   'stock',
   'title',
   'version',
@@ -43,10 +41,6 @@ export default class CreateBookDto extends PickType(Book, [
   @IsString({ message: 'mô tả sách phải là chuỗi' })
   @IsOptional({ always: true })
   description: string;
-
-  @IsEnum(BookStatus, { message: 'trạng thái sách không đúng định dạng' })
-  @IsOptional()
-  status: BookStatus;
 
   @IsEnum(BookFormat, { message: `Phải có định dạng ${Object.keys(BookFormat).join(' ,hoặc ')}` })
   @IsNotEmpty({ message: 'format sách không được để trống' })

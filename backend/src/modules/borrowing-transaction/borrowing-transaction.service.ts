@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { CreateBorrowingTransactionDto } from './dto/create-borrowing-transaction.dto';
 import { UpdateBorrowingTransactionDto } from './dto/update-borrowing-transaction.dto';
-import { Book, BookFormat, BookStatus } from 'src/entities/book.entity';
+import { Book, BookFormat } from 'src/entities/book.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThan, Not, Repository } from 'typeorm';
 import {
@@ -223,7 +223,6 @@ export class BorrowingTransactionService {
       {
         stock: stock - 1,
         waitingBorrowCount: waitingBorrowCount - 1,
-        status: stock > 1 ? BookStatus.UNAVAIL : BookStatus.AVAIL,
       },
     );
 
