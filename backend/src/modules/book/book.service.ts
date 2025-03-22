@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Book, BookFormat } from 'src/entities/book.entity';
-import { Repository } from 'typeorm';
+import { Book, BookFormat, BookSortType } from 'src/entities/book.entity';
+import { Like, Repository } from 'typeorm';
 import UpdateBookDto from './dto/update-book.dto';
 import CreateBookDto from './dto/create-book.dto';
 import {
@@ -12,6 +17,8 @@ import {
   UploadCategory,
 } from 'src/utils/file';
 import { ConfigService } from '@nestjs/config';
+import PaginationBookDto from './dto/pagination-book.dto';
+import SearchBookDto from './dto/search-book.dto';
 
 @Injectable()
 export class BookService {
@@ -34,25 +41,74 @@ export class BookService {
     return book;
   }
 
-  async findBookBySize(currentPage: number, size: number): Promise<Book[]> {
-    return this.bookRepository.find({ skip: (currentPage - 1) * size, take: size });
+  async paginateUsersByCriteria({
+    limit,
+    page,
+    sortBy,
+    sortOrder,
+  }: PaginationBookDto): Promise<{ totalBooks: number; books: Book[] }> {
+    let books: Book[];
+    if (!page || !limit) books = await this.bookRepository.find({ order: { [sortBy]: sortOrder } });
+    else
+      books = await this.bookRepository.find({
+        skip: (page - 1) * limit,
+        take: limit,
+        order: { [sortBy]: sortOrder },
+      });
+    return { totalBooks: books.length, books };
   }
 
-  async findAll(): Promise<{ totalBooks: number; books: Book[] }> {
-    const [books, count] = await this.bookRepository.findAndCount();
-    return { totalBooks: count, books };
+  async searchBooks({
+    author,
+    format,
+    gerne,
+    publishedDate,
+    stock,
+    title,
+    version,
+  }: SearchBookDto): Promise<{ totalBooks: number; users: Book[] }> {
+    let books: Book[];
+    let where: any = {};
+    if (title) where.title = Like(`%${title}%`);
+    if (author) where.author = Like(`%${author}%`);
+    if (format) where.format = format;
+    if (gerne) where.gerne = gerne;
+    if (publishedDate) where.publishedDate = publishedDate;
+    if (stock) where.stock = stock;
+    if (version) where.version = version;
+
+    books = await this.bookRepository.find({
+      select: ['id', 'title', 'author', 'gerne', 'format', 'publishedDate', 'version', 'stock'],
+      where: where,
+    });
+    return {
+      totalBooks: books.length,
+      users: books,
+    };
   }
+
+  // async findAll(): Promise<{ totalBooks: number; books: Book[] }> {
+  //   const [books, count] = await this.bookRepository.findAndCount();
+  //   return { totalBooks: count, books };
+  // }
 
   async create(
     bookData: CreateBookDto & { coverImageFilename?: string; contentFilename?: string },
-  ): Promise<Book> {
+  ): Promise<{ id: number }> {
     const book = this.bookRepository.create(bookData);
 
-    if (book.contentFilename && book.format === BookFormat.DIG) {
-      book.stock = 1;
+    if (book.format === BookFormat.DIG) {
+      if (book.contentFilename) {
+        book.stock = 1;
+      } else book.stock = 0;
     }
 
-    return this.bookRepository.save(book);
+    const result = await this.bookRepository.insert(book);
+
+    if (result.identifiers.length === 0)
+      throw new InternalServerErrorException('Thêm sách mới thất bại!');
+
+    return { id: result.identifiers[0].id };
   }
 
   async update(
@@ -60,10 +116,13 @@ export class BookService {
     bookData: UpdateBookDto,
     ebookFile?: Express.Multer.File[],
     coverImageFile?: Express.Multer.File[],
-  ): Promise<Book | null> {
+  ): Promise<{ id: number }> {
     const book: Book = await this.findById(id);
 
-    const { contentFilename, coverImageFilename } = book;
+    const { contentFilename, coverImageFilename, format } = book;
+
+    if (format === BookFormat.PHYS && ebookFile)
+      throw new BadRequestException('Không cho phép có bản điện tử trong sách có format là bản in');
 
     const uploadFolder = this.configService.get<string>('UPLOAD_FOLDER') || 'uploads';
 
@@ -93,8 +152,11 @@ export class BookService {
       if (value) book[key] = value;
     }
 
-    const result: Book = await this.bookRepository.save(book);
-    return result;
+    const result = await this.bookRepository.update({ id }, book);
+
+    if (!result.affected || result.affected === 0)
+      throw new InternalServerErrorException('Cập nhật sách thất bại!');
+    return { id };
   }
 
   async updateFile(id: number, category: string, filename: string): Promise<any> {

@@ -25,6 +25,26 @@ export enum UserStatus {
   DISABLE = 'disable',
 }
 
+export enum UserSortType {
+  ID = 'id',
+  USERNAME = 'username',
+  EMAIL = 'email',
+  PHONE_NUMBER = 'phoneNumber',
+  ROLE = 'role',
+  STATUS = 'status',
+  NAME = 'name',
+  BIRTHDATE = 'birthDate',
+  MEMBERSHIP_LEVEL = 'membershipLevel',
+  CREATED_AT = 'created_at',
+  UPDATED_AT = 'updated_at',
+}
+
+export enum UserFilterType {}
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 @Entity()
 export class User extends AbstractEntity {
   @Column({ type: 'varchar', length: 50, nullable: false, unique: true })

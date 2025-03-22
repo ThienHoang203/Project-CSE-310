@@ -11,9 +11,8 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import UpdateUserDto from './dto/update-user.dto';
-import { Public } from 'src/decorator/public-route.decorator';
 import { Roles } from 'src/decorator/roles.decorator';
-import { UserRole } from 'src/entities/user.entity';
+import { User, UserRole } from 'src/entities/user.entity';
 import UpdatePasswordUserDto from './dto/update-password-user.dto';
 import { plainToInstance } from 'class-transformer';
 import { UserInfoDto } from './dto/user-info.dto';
@@ -21,6 +20,8 @@ import { ResponseMessage } from 'src/decorator/response-message.decorator';
 import { checkAndGetIntValue } from 'src/utils/checkType';
 import { Request } from 'express';
 import { NewTokenPayloadType, TokenPayloadType } from '../auth/auth.service';
+import PaginationUserDto from './dto/pagination-user.dto';
+import SearchUserDto from './dto/search-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -55,34 +56,18 @@ export class UserController {
     return plainToInstance(UserInfoDto, user);
   }
 
-  // get all account
-  @Get('accounts')
+  // get all users or get a limited number of users by criteria
+  @Get()
   @Roles(UserRole.ADMIN)
-  findAll() {
-    return this.userService.findAll();
+  paginateUsersByCriteria(@Query() query: PaginationUserDto) {
+    return this.userService.paginateUsersByCriteria(query);
   }
 
-  // get and split users by pages
-  @Get('accounts/pagination')
+  @Get('search')
   @Roles(UserRole.ADMIN)
-  findLimitedSize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
-    const parsedIntPage = checkAndGetIntValue(
-      currentPage,
-      `currentPage: ${currentPage} phải là số`,
-      1,
-      `currentPage(${currentPage}) phải lớn hơn 0`,
-    );
-
-    const parsedIntSize = checkAndGetIntValue(
-      pageSize,
-      `pageSize: ${pageSize} phải là số`,
-      1,
-      `pageSize(${pageSize}) phải lớn hơn 0`,
-    );
-
-    return this.userService.findLimited(parsedIntPage, parsedIntSize);
+  searchUsers(@Query() query: SearchUserDto) {
+    return this.userService.searchUsers(query);
   }
-
   // update user's information
   @Patch()
   @ResponseMessage('Cập nhật thông tin người dùng thành công.')

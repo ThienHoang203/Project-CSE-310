@@ -16,6 +16,7 @@ import {
   BorrowingTransactionStatus,
 } from 'src/entities/borrowing-transaction.entity';
 import { UserService } from '../user/user.service';
+import PaginationBorrowingTransactionDto from './dto/pagination-borrowing-transaction.dto';
 
 @Injectable()
 export class BorrowingTransactionService {
@@ -124,14 +125,26 @@ export class BorrowingTransactionService {
     return { totalTransactions: count, transactions: transactions };
   }
 
-  async findAllByUserId(
+  async paginateTransactionByUserId(
     userId: number,
+    { limit, page, sortBy, sortOrder }: PaginationBorrowingTransactionDto,
   ): Promise<{ totalTransactions: number; transactions: BorrowingTransaction[] }> {
-    const [transactions, count] = await this.borrowingTransactionRepository.findAndCountBy({
-      userId,
-    });
+    let transactions: BorrowingTransaction[];
 
-    return { totalTransactions: count, transactions: transactions };
+    if (page === undefined || limit === undefined)
+      transactions = await this.borrowingTransactionRepository.find({
+        where: { userId },
+        order: { [sortBy]: sortOrder },
+      });
+    else
+      transactions = await this.borrowingTransactionRepository.find({
+        where: { userId },
+        order: { [sortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+    return { totalTransactions: transactions.length, transactions: transactions };
   }
 
   async findById(id: number): Promise<BorrowingTransaction> {

@@ -13,6 +13,23 @@ export enum BorrowingTransactionStatus {
   MIS = 'book missing',
 }
 
+export enum BorrowingTransactionSortType {
+  BORROWED_AT = 'borrowedAt',
+  DUE_DATE = 'dueDate',
+  RETURNED_AT = 'returnedAt',
+  BOOK_ID = 'bookId',
+  UPDATED_AT = 'updatedAt',
+}
+
+export enum AdminBorrowingTransactionSortType {
+  BORROWED_AT = 'borrowedAt',
+  DUE_DATE = 'dueDate',
+  RETURNED_AT = 'returnedAt',
+  BOOK_ID = 'bookId',
+  USER_ID = 'userId',
+  UPDATED_AT = 'updatedAt',
+}
+
 @Entity()
 export class BorrowingTransaction extends AbstractEntity {
   @Column({ type: 'int', nullable: false })

@@ -6,10 +6,9 @@ import {
   Patch,
   Param,
   Delete,
-  UseInterceptors,
   BadRequestException,
-  ConflictException,
   Req,
+  Query,
 } from '@nestjs/common';
 import { BorrowingTransactionService } from './borrowing-transaction.service';
 import { CreateBorrowingTransactionDto } from './dto/create-borrowing-transaction.dto';
@@ -19,9 +18,9 @@ import { UserRole } from 'src/entities/user.entity';
 import { Roles } from 'src/decorator/roles.decorator';
 import { ResponseMessage } from 'src/decorator/response-message.decorator';
 import { BorrowingTransactionStatus } from 'src/entities/borrowing-transaction.entity';
-import { UserStatusInterceptor } from 'src/interceptor/user-status.interceptor';
 import { Request } from 'express';
 import { NewTokenPayloadType, TokenPayloadType } from '../auth/auth.service';
+import PaginationBorrowingTransactionDto from './dto/pagination-borrowing-transaction.dto';
 
 @Controller('borrowing')
 export class BorrowingTransactionController {
@@ -30,7 +29,7 @@ export class BorrowingTransactionController {
   // ---------------------ADMIN ROUTES-----------------------------
 
   //get all transaction
-  @Get('admin')
+  @Get('view')
   @Roles(UserRole.ADMIN)
   findAll() {
     return this.borrowingTransactionService.findAll();
@@ -111,7 +110,7 @@ export class BorrowingTransactionController {
 
   //create a transaction
   @Post()
-  @ResponseMessage('Tạo giao dịch thành công, hãy đến trực tiếp thư viên để lấy sách đã mượn nhé!')
+  @ResponseMessage('Tạo giao dịch mượn sách thành công.')
   create(
     @Req() req: Request,
     @Body() createBorrowingTransactionDto: CreateBorrowingTransactionDto,
@@ -125,16 +124,16 @@ export class BorrowingTransactionController {
     return this.borrowingTransactionService.create(payload.userId, createBorrowingTransactionDto);
   }
 
-  // get all my transaction
+  // get all my transaction or get a limited number of my transaction
   @Get()
-  findAllMyTransaction(@Req() req: Request) {
+  findAllMyTransaction(@Req() req: Request, @Query() query: PaginationBorrowingTransactionDto) {
     if (!req.user || Object.keys(req.user).length === 0)
       throw new BadRequestException('accessToken không có payload');
 
     const payload = req.user as TokenPayloadType | NewTokenPayloadType;
     if (!payload.userId) throw new BadRequestException('userId không có trong payload!');
 
-    return this.borrowingTransactionService.findAllByUserId(payload.userId);
+    return this.borrowingTransactionService.paginateTransactionByUserId(payload.userId, query);
   }
 
   //get one my transaction

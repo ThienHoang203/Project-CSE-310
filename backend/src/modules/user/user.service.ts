@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -7,12 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User, UserRole, UserStatus } from '../../entities/user.entity';
-import { Equal, FindOptionsWhere, Not, Repository } from 'typeorm';
+import { SortOrder, User, UserRole, UserSortType, UserStatus } from '../../entities/user.entity';
+import { Equal, Like, Not, Repository } from 'typeorm';
 import UpdateUserDto from './dto/update-user.dto';
 import CreateUserDto from './dto/create-user.dto';
 import { formattedUserRespsonse } from 'src/utils/format';
 import { compareHashedString, hashString } from 'src/utils/hashing';
+import PaginationUserDto from './dto/pagination-user.dto';
+import SearchUserDto from './dto/search-user.dto';
 
 @Injectable()
 export class UserService {
@@ -52,29 +53,53 @@ export class UserService {
     return user;
   }
 
-  async findLimited(
-    currentPage: number,
-    pageSize: number,
-  ): Promise<{ totalUsers: number; users: User[] }> {
-    const users = await this.userRepository.find({
-      skip: (currentPage - 1) * pageSize,
-      take: pageSize,
-      select: formattedUserRespsonse,
-    });
+  async paginateUsersByCriteria({
+    limit,
+    page,
+    sortBy,
+    sortOrder,
+  }: PaginationUserDto): Promise<{ totalUsers: number; users: User[] }> {
+    let users: User[];
 
-    return { totalUsers: users.length, users };
-  }
-
-  async findAll(): Promise<{ totalUsers: number; users: User[] }> {
-    const [users, count] = await this.userRepository.findAndCount({
-      select: formattedUserRespsonse,
-    });
-
-    if (count === 0) throw new NotFoundException(`Không tìm thấy bất kì người dùng nào`);
+    if (page === undefined || limit === undefined)
+      users = await this.userRepository.find({
+        select: formattedUserRespsonse,
+        order: { [sortBy]: sortOrder },
+      });
+    else
+      users = await this.userRepository.find({
+        select: formattedUserRespsonse,
+        order: { [sortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
     return {
+      totalUsers: users.length,
       users: users,
-      totalUsers: count,
+    };
+  }
+
+  async searchUsers(searchUserDto: SearchUserDto): Promise<{ totalUsers: number; users: User[] }> {
+    const { username, email, phoneNumber, name, birthDate, role, status, membershipLevel } =
+      searchUserDto;
+    let users: User[];
+    let where: any = {};
+    if (username) where.username = Like(`%${username}%`);
+    if (email) where.email = Like(`%${email}%`);
+    if (phoneNumber) where.phoneNumber = Like(`%${phoneNumber}%`);
+    if (name) where.name = Like(`%${name}%`);
+    if (birthDate) where.birthDate = birthDate;
+    if (role) where.role = role;
+    if (status) where.status = status;
+    if (membershipLevel) where.membershipLevel = membershipLevel;
+    users = await this.userRepository.find({
+      select: formattedUserRespsonse,
+      where: where,
+    });
+    return {
+      totalUsers: users.length,
+      users: users,
     };
   }
 
