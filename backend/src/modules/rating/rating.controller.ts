@@ -28,7 +28,7 @@ export class RatingController {
   //-------------------------------NORMAL USER ROLE-------------------------
 
   //get all comments about the book
-  @Get('/:bookId')
+  @Get(':bookId')
   @Public()
   findAllByBookId(@Param('bookId') bookId: string) {
     const parsedIntId = checkAndGetIntValue(
@@ -53,7 +53,7 @@ export class RatingController {
     return this.ratingService.create(payload.userId, createRatingDto);
   }
 
-  @Patch('/:ratingId')
+  @Patch(':ratingId')
   @ResponseMessage('Cập nhật thành công')
   async update(
     @Req() req: Request,
@@ -81,7 +81,7 @@ export class RatingController {
     return this.ratingService.update(parseIntId, body);
   }
 
-  @Delete('/:ratingId')
+  @Delete(':ratingId')
   @ResponseMessage('Xóa thành công')
   async remove(@Req() req: Request, @Param('ratingId') ratingId: string) {
     if (!req.user || Object.keys(req.user).length === 0)

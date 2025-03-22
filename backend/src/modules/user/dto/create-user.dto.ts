@@ -8,7 +8,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { IsValidBirthDate } from 'src/decorator/IsValidBirthDate.decorator';
+import { IsValidBirthDate } from 'src/decorator/is-valid-birth-date.decorator';
 import { User } from 'src/entities/user.entity';
 
 export default class CreateUserDto extends PickType(User, [

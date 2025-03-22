@@ -19,6 +19,20 @@ export enum BookFormat {
   DIG = 'bản điện tử',
 }
 
+export enum BookSortType {
+  ID = 'id',
+  TITLE = 'title',
+  FORMAT = 'format',
+  AUTHOR = 'author',
+  GERNE = 'gerne',
+  STOCK = 'stock',
+  WAITING_BORROW_COUNT = 'waitingBorrowCount',
+  PUBLISHED_DATE = 'publishedDate',
+  VERSION = 'version',
+  CREATED_AT = 'created_at',
+  UPDATED_AT = 'updated_at',
+}
+
 @Entity()
 export class Book extends AbstractEntity {
   @Column({ type: 'varchar', length: 200, nullable: false })

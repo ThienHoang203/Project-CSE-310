@@ -16,7 +16,7 @@ import {
 import { BookService } from './book.service';
 import UpdateBookDto from './dto/update-book.dto';
 import { ConfigService } from '@nestjs/config';
-import { UserRole } from 'src/entities/user.entity';
+import { SortOrder, UserRole } from 'src/entities/user.entity';
 import { Roles } from 'src/decorator/roles.decorator';
 import { join, parse } from 'path';
 import { Response } from 'express';
@@ -26,9 +26,11 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ebookExtType, fileFilter } from 'src/utils/fileFilter';
 import { memoryStorage } from 'multer';
 import { createFolderIfAbsent, saveFile } from 'src/utils/file';
-import { BookFormat } from 'src/entities/book.entity';
+import { BookFormat, BookSortType } from 'src/entities/book.entity';
 import { Public } from 'src/decorator/public-route.decorator';
 import { checkAndGetIntValue } from 'src/utils/checkType';
+import PaginationBookDto from './dto/pagination-book.dto';
+import SearchBookDto from './dto/search-book.dto';
 
 type FileNameObjectType = {
   ebookFilename: string;
@@ -112,7 +114,7 @@ export class BookController {
   }
 
   //update a book
-  @Patch('/:bookId')
+  @Patch(':bookId')
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -156,7 +158,7 @@ export class BookController {
   }
 
   //delete a book
-  @Delete('/:bookId')
+  @Delete(':bookId')
   delete(@Param('bookId') bookId: string) {
     const parsedIntID = checkAndGetIntValue(
       bookId,
@@ -191,36 +193,23 @@ export class BookController {
     return res.sendFile(filePath);
   }
 
-  @Get('/pagination')
-  @Roles()
-  @Public()
-  paginateBySize(@Query('currentPage') currentPage: string, @Query('pageSize') pageSize: string) {
-    const parsedIntCurrentPage = checkAndGetIntValue(
-      currentPage,
-      'currentPage phải là số nguyên!',
-      1,
-      'currentPage phải lớn hơn 0!',
-    );
-    const parsedIntPageSize = checkAndGetIntValue(
-      currentPage,
-      'currentPage phải là số nguyên!',
-      1,
-      'currentPage phải lớn hơn 0!',
-    );
-
-    return this.bookService.findBookBySize(parsedIntCurrentPage, parsedIntPageSize);
-  }
-
-  //get all books
+  // get all books or get a limited number of books by criteria
   @Get()
   @Roles()
   @Public()
-  getAllBook() {
-    return this.bookService.findAll();
+  paginateUsersByCriteria(@Query() query: PaginationBookDto) {
+    return this.bookService.paginateUsersByCriteria(query);
+  }
+
+  @Get('search')
+  @Roles()
+  @Public()
+  searchBooks(@Query() query: SearchBookDto) {
+    return this.bookService.searchBooks(query);
   }
 
   // get a book
-  @Get('/:bookId')
+  @Get(':bookId')
   @Roles()
   @Public()
   getBookById(@Param('bookId') bookId: string) {

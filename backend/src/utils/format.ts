@@ -28,17 +28,17 @@ export const formattedUserRespsonse: FindOptionsSelect<User> = [
   'birthDate',
 ] as FindOptionsSelect<User>;
 
-export const formattedUserLoginRespsonse: FindOptionsSelect<User> = [
-  'id',
-  'username',
-  'name',
-  'phoneNumber',
-  'email',
-  'role',
-  'status',
-  'password',
-  'membershipLevel',
-  'birthDate',
-  'created_at',
-  'updated_at',
-] as FindOptionsSelect<User>;
+// export const formattedUserLoginRespsonse: FindOptionsSelect<User> = [
+//   'id',
+//   'username',
+//   'name',
+//   'phoneNumber',
+//   'email',
+//   'role',
+//   'status',
+//   'password',
+//   'membershipLevel',
+//   'birthDate',
+//   'created_at',
+//   'updated_at',
+// ] as FindOptionsSelect<User>;

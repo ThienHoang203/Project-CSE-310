@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Book, BookFormat } from 'src/entities/book.entity';
-import { Repository } from 'typeorm';
+import { Book, BookFormat, BookSortType } from 'src/entities/book.entity';
+import { Like, Repository } from 'typeorm';
 import UpdateBookDto from './dto/update-book.dto';
 import CreateBookDto from './dto/create-book.dto';
 import {
@@ -17,6 +17,8 @@ import {
   UploadCategory,
 } from 'src/utils/file';
 import { ConfigService } from '@nestjs/config';
+import PaginationBookDto from './dto/pagination-book.dto';
+import SearchBookDto from './dto/search-book.dto';
 
 @Injectable()
 export class BookService {
@@ -39,18 +41,56 @@ export class BookService {
     return book;
   }
 
-  async findBookBySize(
-    currentPage: number,
-    size: number,
-  ): Promise<{ totalBooks: number; books: Book[] }> {
-    const books = await this.bookRepository.find({ skip: (currentPage - 1) * size, take: size });
+  async paginateUsersByCriteria({
+    limit,
+    page,
+    sortBy,
+    sortOrder,
+  }: PaginationBookDto): Promise<{ totalBooks: number; books: Book[] }> {
+    let books: Book[];
+    if (!page || !limit) books = await this.bookRepository.find({ order: { [sortBy]: sortOrder } });
+    else
+      books = await this.bookRepository.find({
+        skip: (page - 1) * limit,
+        take: limit,
+        order: { [sortBy]: sortOrder },
+      });
     return { totalBooks: books.length, books };
   }
 
-  async findAll(): Promise<{ totalBooks: number; books: Book[] }> {
-    const [books, count] = await this.bookRepository.findAndCount();
-    return { totalBooks: count, books };
+  async searchBooks({
+    author,
+    format,
+    gerne,
+    publishedDate,
+    stock,
+    title,
+    version,
+  }: SearchBookDto): Promise<{ totalBooks: number; users: Book[] }> {
+    let books: Book[];
+    let where: any = {};
+    if (title) where.title = Like(`%${title}%`);
+    if (author) where.author = Like(`%${author}%`);
+    if (format) where.format = format;
+    if (gerne) where.gerne = gerne;
+    if (publishedDate) where.publishedDate = publishedDate;
+    if (stock) where.stock = stock;
+    if (version) where.version = version;
+
+    books = await this.bookRepository.find({
+      select: ['id', 'title', 'author', 'gerne', 'format', 'publishedDate', 'version', 'stock'],
+      where: where,
+    });
+    return {
+      totalBooks: books.length,
+      users: books,
+    };
   }
+
+  // async findAll(): Promise<{ totalBooks: number; books: Book[] }> {
+  //   const [books, count] = await this.bookRepository.findAndCount();
+  //   return { totalBooks: count, books };
+  // }
 
   async create(
     bookData: CreateBookDto & { coverImageFilename?: string; contentFilename?: string },
